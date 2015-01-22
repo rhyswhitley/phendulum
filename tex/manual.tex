@@ -1,0 +1,77 @@
+\documentclass[11pt]{article}
+
+\usepackage[bottom=2cm]{geometry}
+\usepackage[parfill]{parskip}
+\usepackage{graphicx}
+\usepackage{pdfpages}
+\usepackage{multirow}
+\usepackage{rotating}
+\usepackage{fancyhdr}
+\usepackage{caption} 
+\usepackage{hyperref}
+\usepackage{subfigure}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{chngpage}
+\usepackage{fontspec,xltxtra,xunicode}
+\usepackage{tikz}
+\usepackage{url}
+
+\geometry{letterpaper}
+\captionsetup[table]{skip=10pt}
+
+\setmainfont{Cambria}
+\setsansfont{Cambria}
+
+\definecolor{darkgray}{HTML}{222222}
+\definecolor{crimson}{HTML}{DC143C}
+\definecolor{maroon}{HTML}{800000}
+\definecolor{teal}{HTML}{008080}
+
+\newcommand*{\TitleFont}{
+      \usefont{\encodingdefault}{\rmdefault}{b}{n}%
+      \fontsize{20}{20}
+      \fontspec{Gill Sans}
+      \color{teal}
+      \selectfont
+}
+\newcommand*{\AuthorFont}{
+      \usefont{\encodingdefault}{\rmdefault}{b}{n}%
+      \fontsize{14}{20}
+      \fontspec{Gill Sans}
+      \color{black}
+      \selectfont
+      \vspace{5cm}
+}
+
+\title{\TitleFont Phendulum: A first principles model of describing savanna phenology}
+\author{{\AuthorFont Rhys Whitley, Douglas Kelley, Martin De Kauwe, Trevor Keenan}}
+
+\date{}
+\begin{document}
+
+\fancyhead{}  % Clears all page headers and footers
+\lhead{\textit{\textcolor{teal}{Phendulum: A first principles model of describing savanna phenology}}}
+\chead{}
+\rhead{\thepage}
+\cfoot{} % get rid of the page number 
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\pagestyle{fancy}  % Finally, use the "fancy" page style to implement the FancyHdr headers
+
+\maketitle
+
+\vspace{-11em}
+\begin{adjustwidth}{-3.25cm}{}
+\includegraphics[width=\paperwidth]
+    {/Users/rhys/Pictures/SavannaWorkshop2014/IMG_1751}
+\end{adjustwidth}
+\vspace{5em}
+
+\input{content}
+
+\vspace{1em}
+\AddToShipoutPicture*{
+\includegraphics[scale=0.01]{/Users/rhys/Pictures/SavannaWorkshop2014/HSFluxTowervisit1.jpg}
+}
+\end{document}  

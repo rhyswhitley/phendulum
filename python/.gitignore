@@ -1,0 +1,4 @@
+*.pdf
+data/
+.Icon?
+.RS_Data

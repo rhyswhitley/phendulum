@@ -1,0 +1,50 @@
+\section{Introduction}
+The reasoning behind this idea is that global phenology, at a very basic (and
+possibly incorrect level), operates in simple harmonic motion. The underlying
+signal can be simply described as:
+
+\begin{equation}
+    \Theta(t) = \Theta_0 \sin\left(\frac{t\pi}{T}\right)
+\end{equation}
+
+where $t$ is some arbitrary point in time, $\Theta_0$ is the initial amplitude
+or angle from the perpendicular and $T$ is the period (or frequency).
+
+\begin{center}
+\begin{tikzpicture}[scale=1.25]
+    \draw[red,thick,<->] (-1,1) parabola bend (0,0) (2.1,4.41)
+        node[below right] {$y=x^2$};
+    \draw[loosely dotted] (-1,0) grid (4,4);
+\end{tikzpicture}
+\end{center}
+
+Tree and grass phenology can be represented by two pendulums, where both are
+coupled to one another via soil water status of the soil layers. 
+
+The amplitude of the pendulum changes at an annual time-step and is linked to
+the soil water content of the root zone and volume of incoming rainfall. For
+trees, that access deeper soil water stores, the amplitude of the signal is
+small, but for grasses, whose rooting zone is limited to the upper 0.5 m, their
+amplitude is much higher, such that $\Theta_g > \Theta_t$.
+
+The period $T$ of the signal is related to the growing season and has a
+relation to the length of the pendulum by $T=2\pi\sqrt(L/g)$. At this point we
+assume mass plays no role in the motion of the pendulum (untrue as we could
+relate plant height), but we will get to that later.
+
+We also ignore the effect of temperature on phenology (although this will be
+added in)
+
+The key is then to translate this underlying signal into the way a model
+activates the plant it simulates and the allocation of leaf area to overall
+plant leaf area index.
+
+The hysteresis needs to be modelled and not ignored or excluded for the sake of
+convenience.
+
+Grass activation is negatively geared. The response to productivity is only
+positive with the availability of adequate moisture, without which their is a
+decay to zero.
+
+As well as variance in the period of the signal, the available moisture may
+have a greater impact upon the amplitude of leaf cover (\emph{greeness}).
