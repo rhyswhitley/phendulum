@@ -9,12 +9,16 @@ from scipy.ndimage import gaussian_filter
 
 # Models
 def lin_mod(par,x):
-    k = par
-    return k*x
+    k0 = par
+    return k0*x
 
 def exp_mod(par,x):
     k1, k2 = par
     return k1*np.exp(-k2*x)
+
+def sig_mod(par,x):
+    k3, k4 = par
+    return 1/(1+np.exp(k3*x - k4))
 
 # Cost functions
 def lin_residuals(par,y,x):
@@ -23,8 +27,11 @@ def lin_residuals(par,y,x):
 def exp_residuals(par,y,x):
     return y-exp_mod(par,x)
 
+def sig_residuals(par,y,x):
+    return y-sig_mod(par,x)
+
 # Import data
-file_path = "~/Repositories/oscillator/outputs/ecDaily.csv"
+file_path = "data/filtered_SturtPlains.csv"
 sp_data = pd.read_csv( expanduser(file_path) )
 show_plot = False
 
@@ -84,22 +91,28 @@ sp_data_filt = sp_data_new.loc[(ydiff['yd1']<upper) & (ydiff['yd1']>lower)]
 # the extrema of SWC and NDVI
 lin0 = [1]
 exp0 = [1,1]
+sig0 = [1,0]
 xobs = sp_data_filt['SWC10']
 yobs = sp_data_filt['NDVI250X']
 lin_res = leastsq( lin_residuals, lin0, args=(yobs,xobs) )
 exp_res = leastsq( exp_residuals, exp0, args=(yobs,xobs) )
+sig_res = leastsq( sig_residuals, sig0, args=(yobs,xobs) )
+
+# Save the parameter estimates to a CSV table
 
 # Create vectors for model fits
 xs = np.arange(0,0.3,1e-3)
 ndvi_lin = lin_mod( lin_res[0], xs )
 ndvi_exp = exp_mod( exp_res[0], xs )
+ndvi_sig = exp_mod( sig_res[0], xs )
 
 # Plot the results
 plt.plot( sp_data_filt["SWC10"], sp_data_filt["NDVI250X"], 'o', color='black' )
 plt.plot( xs, ndvi_lin, linestyle='-', color='red', lw=2, label=r"$k_{0}\theta_{s}$" )
 plt.plot( xs, ndvi_exp, linestyle='-', color='blue', lw=2, label=r"$k_{1}\exp(k_{2}\theta_{s})$" )
-plt.xlabel(r'$\theta_{s}$')
+plt.plot( xs, ndvi_sig, linestyle='-', color='purple', lw=2, label=r"$(1+\exp(k_{3}\theta_{s}-k_{4}))^{-1}$" )
+plt.xlabel(r'$\theta_{s 10cm}$', fontsize=18)
 plt.ylabel('NDVI')
 plt.legend(loc=2)
 plt.axis([0,0.25,0,0.5])
-plt.savefig('fit_Fe.pdf')
+plt.savefig('figs/fit_Fe.pdf')
