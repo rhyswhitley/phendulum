@@ -53,6 +53,7 @@ docs/_build/
 # PyBuilder
 target/
 
-# Figures and data
-*.pdf
-/data
+# Figures and data which will contain large datasets
+/data/*
+/figs/*
+/outputs/*

@@ -28,12 +28,6 @@ file_path = "~/Repositories/oscillator/outputs/ecDaily.csv"
 sp_data = pd.read_csv( expanduser(file_path) )
 show_plot = False
 
-# plots environmental data
-if show_plot==True:
-    fig, (ax1,ax2) = plt.subplots(2, 1, sharex=True)
-    ax1.plot( sp_data["NDVI250X"], linestyle='-', color='red' )
-    ax2.plot( sp_data["SWC10"], linestyle='-', color='blue' )
-    plt.show()
 
 # Fix the bugger-up with the tail of the NDVI data
 sp_data.loc[2384:2408,'NDVI250X'] = sp_data.loc[2370,'NDVI250X']
