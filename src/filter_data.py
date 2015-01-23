@@ -1,8 +1,10 @@
 #!/usr/bin/env python2.7
 
+import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from os.path import isfile
+import sys
 
 # Import EC tower Dingo dataset for Sturt Plains [move this to a config file]
 out_fold = "../data/"
@@ -19,6 +21,7 @@ else:
     # Display column names and their index for reference
     ec_data = pd.read_csv( fpath, parse_dates=True , index_col=['DT'] )
     show_names = False
+    show_plot = True
     if show_names == True:
         for n,i in zip(ec_data.columns.values,range(ec_data.shape[1])):
             print( str(i) + " : " + n )
@@ -27,8 +30,9 @@ else:
     ec_phen = ec_data.loc[:,("Sws_Con","250m_16_days_NDVI_new_smooth")]
 
     # Resample the hourly data to daily (although we could just do 16-day)
-    ec_filt = ec_phen.resample('D', how='mean',)
-    ec_filt.columns = ["SWC10","NDVI250X"]
+    ec_sampled = ec_phen.resample('D', how='mean',)
+    ec_sampled.columns = ["SWC10","NDVI250X"]
+    ec_filt = ec_sampled[np.isfinite(ec_sampled['NDVI250X'])]
 
     draw_plot = True
     # Plots environmental data

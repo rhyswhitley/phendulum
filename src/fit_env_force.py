@@ -36,22 +36,6 @@ file_path = "../data/filtered_SturtPlains_v12.csv"
 sp_data = pd.read_csv( expanduser(file_path) )
 show_plot = True
 
-
-# Fix the bugger-up with the tail of the NDVI data
-sp_data.loc[2384:2408,'NDVI250X'] = sp_data.loc[2370,'NDVI250X']
-# Rough idea to remove trees
-yraw = sp_data["NDVI250X"]
-ymes = yraw - min(yraw)
-if show_plot==True:
-    fig = plt.figure()
-    plt.plot( yraw, '-', color='lightblue', label='Total')
-    plt.plot( ymes, '-', color='blue', lw=2, label='Grass' )
-    plt.legend(loc=1)
-    plt.xlabel('Days since 1-Jan-2008')
-    plt.ylabel('NDVI')
-    plt.savefig(figs_path+"ndvi_corrected.pdf")
-    plt.close(fig)
-
 # Smooth out soil moisture to get the averaged concurrent point matching the
 # inflexion points in the NDVI data
 xraw = sp_data["SWC10"]
@@ -65,6 +49,21 @@ if show_plot==True:
     ax2.set_ylabel(r'$\sigma$', fontsize=18)
     ax2.set_xlabel('Days since 1-Jan-2008')
     plt.savefig(figs_path+"swc_smoothed.pdf")
+    plt.close(fig)
+
+# Fix the bugger-up with the tail of the NDVI data
+#ec_sampled.loc[2384:2408,'NDVI250X'] = ec_sampled.loc[2370,'NDVI250X']
+# Rough idea to remove trees
+yraw = sp_data["NDVI250X"]
+ymes = yraw - min(yraw)
+if show_plot==True:
+    fig = plt.figure()
+    plt.plot( yraw, '-', color='lightblue', label='Total')
+    plt.plot( ymes, '-', color='blue', lw=2, label='Grass' )
+    plt.legend(loc=1)
+    plt.xlabel('Days since 1-Jan-2008')
+    plt.ylabel('NDVI')
+    plt.savefig(figs_path+"ndvi_corrected.pdf")
     plt.close(fig)
 
 # From the above two techniques, create a new dataframe for the filtered

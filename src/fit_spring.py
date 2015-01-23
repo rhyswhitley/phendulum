@@ -3,10 +3,12 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 from scipy.optimize import leastsq
 from scipy.ndimage import gaussian_filter
 # our spring dynamics module
 import springDynamics as sd
+import sys
 
 # create a partially evaluated function that describes the time-varying force on the pendulum
 def efunc(k):
@@ -20,50 +22,77 @@ version = "_v12"
 fpath = "{0}{1}_{2}{3}.csv".format(out_fold,out_name,site,version)
 
 # import data
-ec_filt = pd.read_csv( fpath, parse_dates=True, index_col=['DT'] )
+ec_raw = pd.read_csv( fpath, parse_dates=True, index_col=['DT'] )
+# for some reason the last 14 days are Null (check the resample) -- temp. fix below
+ec_filt = ec_raw[np.isfinite(ec_raw['NDVI250X'])]
+
+#================================================================================
+# Pre-fit data set
+#================================================================================
 
 # the environmental forcing to be passed to the pendulum
-ys_raw = ec_filt["NDVI250X"]
-xs_raw = ec_filt["SWC10"]
-xs_smooth = gaussian_filter( xs_raw, 10 )
+ys = ec_filt["NDVI250X"]
+xs = ec_filt["SWC10"]
+xs_smooth = gaussian_filter( xs, 10 )
+
+# Rough idea to remove trees
+y_grass = ys - min(ys)
 
 # temp. placement for Fe fitted parameters - will need to import them from table
 par0 = [0.04060279,-10.09972272]
 # lazy function that will be passed to the pendulum
 txf = efunc(par0)
 
-# pass data to the spring to see if it works
-#testSpring = sd.spring( xs_raw, txf, [40,1]  )
-#phenology = testSpring.calc_dynamics()
-# seems to
+#================================================================================
+# Optimise pendulum on data
+#================================================================================
 
 # objective function (must return an array I think)
 def fmin(par, Y, X):
     model_init = sd.spring( X, txf, par )
     fx_model = model_init.calc_dynamics()['x']
     return np.array(Y) - np.array(fx_model)
-# check to see if it works
-#print fmin( [1,1], ys_raw, xs_raw )
-
-# for some reason the last 14 days are Null (check the resample)
-ys_raw[pd.isnull(ys_raw)] = 0
 
 # okay now see if you can fit the spring to the data
-spring_opt = leastsq( fmin, [1,1], args=(ys_raw,xs_raw) )
+spring_opt = leastsq( fmin, [0,2,0.1], args=(y_grass, xs) )
 print spring_opt[0]
 
+#================================================================================
+# Plot results
+#================================================================================
+
 # now assign the optimised coefficients to the pendulum and calculate the motion
-model_fitted = sd.spring( xs_raw, txf, spring_opt[0] )
+model_fitted = sd.spring( xs, txf, spring_opt[0] )
 phenology = model_fitted.calc_dynamics()
 
 # plot the results
-y_mes = ec_filt['NDVI250X']
 y_mod = phenology['x']
-fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
-ax1.plot( y_mes, color='black', lw=2 )
-ax1.plot( y_mod, color='red', lw=2 )
-ax2.plot( y_mod, 'o', color='black' )
+# there's got to be an easier way than having to convert to arrays
+y_res = np.array(y_mod)-np.array(y_grass)
+
+fig = plt.figure()
+# setup plotting grid
+gs = gridspec.GridSpec(3, 1, height_ratios=[3,1,1])
+ax1 = fig.add_subplot(gs[0])
+ax2 = fig.add_subplot(gs[1], sharex=ax1)
+ax3 = fig.add_subplot(gs[2], sharex=ax2)
+# plot data
+ax1.plot( xs.index, y_grass, color='black', lw=2, label="MODIS" )
+ax1.plot( xs.index, y_mod, color='red', lw=2, label="Pendulum" )
+ax2.plot( xs.index, y_res, 'o', color='black', alpha=0.3 )
+ax3.plot( xs.index, xs, color='blue', lw=1.5 )
+# zero line
+ax2.axhline( 0, color='black', linestyle='--' )
+# set axis limits
+ax2.axis([xs.index[0], xs.index[-1], -0.4, 0.4])
+# labels
 ax1.set_ylabel( r"NDVI", fontsize=14 )
 ax2.set_ylabel( r"$\sigma_{NDVI}$", fontsize=18 )
+ax3.set_ylabel( r"$\theta_{s10cm}$", fontsize=18 )
+# remove xlabels on the second and third plots
+plt.setp(ax2.get_yticklabels(), visible=False)
+plt.setp(ax3.get_yticklabels(), visible=False)
+# legends
+ax1.legend(loc=1)
 plt.show()
 
