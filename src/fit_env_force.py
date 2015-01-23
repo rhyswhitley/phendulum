@@ -31,9 +31,10 @@ def sig_residuals(par,y,x):
     return y-sig_mod(par,x)
 
 # Import data
-file_path = "data/filtered_SturtPlains.csv"
+figs_path = "../figs/"
+file_path = "../data/filtered_SturtPlains_v12.csv"
 sp_data = pd.read_csv( expanduser(file_path) )
-show_plot = False
+show_plot = True
 
 
 # Fix the bugger-up with the tail of the NDVI data
@@ -42,12 +43,14 @@ sp_data.loc[2384:2408,'NDVI250X'] = sp_data.loc[2370,'NDVI250X']
 yraw = sp_data["NDVI250X"]
 ymes = yraw - min(yraw)
 if show_plot==True:
+    fig = plt.figure()
     plt.plot( yraw, '-', color='lightblue', label='Total')
     plt.plot( ymes, '-', color='blue', lw=2, label='Grass' )
     plt.legend(loc=1)
     plt.xlabel('Days since 1-Jan-2008')
     plt.ylabel('NDVI')
-    plt.show()
+    plt.savefig(figs_path+"ndvi_corrected.pdf")
+    plt.close(fig)
 
 # Smooth out soil moisture to get the averaged concurrent point matching the
 # inflexion points in the NDVI data
@@ -58,7 +61,11 @@ if show_plot==True:
     ax1.plot( xraw, '-', color='pink' )
     ax1.plot( xmes, linestyle='-', color='red', lw=2)
     ax2.plot( xraw-xmes, '.', color='pink' )
-    plt.show()
+    ax1.set_ylabel(r'$\theta_{s}$', fontsize=18)
+    ax2.set_ylabel(r'$\sigma$', fontsize=18)
+    ax2.set_xlabel('Days since 1-Jan-2008')
+    plt.savefig(figs_path+"swc_smoothed.pdf")
+    plt.close(fig)
 
 # From the above two techniques, create a new dataframe for the filtered
 # versions of SWC and NDVI
@@ -75,9 +82,13 @@ if show_plot==True:
     ax1.plot( ymes, color='purple', lw=2)
     ax2.plot( yd, color='red', lw=2, label="$dx/dt$" )
     ax2.plot( ydd, color='blue', lw=2, label="$d^2x/dt^2$" )
+    ax1.set_ylabel('NDVI signal')
+    ax2.set_ylabel(r'$x_{t+1}-x_{t}$', fontsize=16)
+    ax2.set_xlabel('Days since 1-Jan-2008')
     ax2.axis([1,1.9e3,-6e-3,6e-3])
     ax2.legend(loc=1)
-    plt.show()
+    plt.savefig(figs_path+"swc_turningpoints.pdf")
+    plt.close(fig)
 
 # Put these in a dataframe to filter sp_data_new
 ydiff = pd.DataFrame({'yd1':yd,'yd2':ydd})
@@ -107,6 +118,7 @@ ndvi_exp = exp_mod( exp_res[0], xs )
 ndvi_sig = exp_mod( sig_res[0], xs )
 
 # Plot the results
+fig = plt.figure()
 plt.plot( sp_data_filt["SWC10"], sp_data_filt["NDVI250X"], 'o', color='black' )
 plt.plot( xs, ndvi_lin, linestyle='-', color='red', lw=2, label=r"$k_{0}\theta_{s}$" )
 plt.plot( xs, ndvi_exp, linestyle='-', color='blue', lw=2, label=r"$k_{1}\exp(k_{2}\theta_{s})$" )
@@ -115,4 +127,4 @@ plt.xlabel(r'$\theta_{s 10cm}$', fontsize=18)
 plt.ylabel('NDVI')
 plt.legend(loc=2)
 plt.axis([0,0.25,0,0.5])
-plt.savefig('figs/fit_Fe.pdf')
+plt.savefig(figs_path+"phen_fe_fit.pdf")

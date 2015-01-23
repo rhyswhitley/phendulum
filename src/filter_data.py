@@ -1,18 +1,17 @@
 #!/usr/bin/env python2.7
 
-import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from os.path import expanduser, isfile
+from os.path import isfile
 
 # Import EC tower Dingo dataset for Sturt Plains [move this to a config file]
-out_fold = "data/"
-fig_fold = "figs/"
+out_fold = "../data/"
+fig_fold = "../figs/"
 out_name = "filtered"
 site = "SturtPlains"
 version = "_v12"
-opath = "{0}{1}_{2}.csv".format(out_fold,out_name,site)
-fpath = "data/Advanced_processed_data_{0}{1}.csv".format(site,version)
+opath = "{0}{1}_{2}{3}.csv".format(out_fold,out_name,site,version)
+fpath = "{0}{1}{2}.csv".format(out_fold,site,version)
 
 if isfile(opath)==True:
     print("File already exists")
