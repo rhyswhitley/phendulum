@@ -117,6 +117,8 @@ ndvi_lin = lin_mod( lin_res[0], xs )
 ndvi_exp = exp_mod( exp_res[0], xs )
 ndvi_sig = exp_mod( sig_res[0], xs )
 
+print exp_res
+
 # Plot the results
 fig = plt.figure()
 plt.plot( sp_data_filt["SWC10"], sp_data_filt["NDVI250X"], 'o', color='black' )
