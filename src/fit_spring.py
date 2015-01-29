@@ -54,7 +54,7 @@ def fmin(par, Y, X):
     return np.array(Y) - np.array(fx_model)
 
 # okay now see if you can fit the spring to the data
-spring_opt = leastsq( fmin, [0,2,0.1], args=(y_grass, xs) )
+spring_opt = leastsq( fmin, [0,1], args=(y_grass, xs) )
 print spring_opt[0]
 
 #================================================================================
