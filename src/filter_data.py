@@ -93,7 +93,7 @@ def get_all_site_names(ec_files):
 def get_site_name(ec_files):
     file_name = re.compile('^\w+').findall(ec_files)
     split_name = re.split('_',file_name[0])
-    return split_name[3]
+    return split_name[-2]
 
     # Get all EC files in the folder above
 

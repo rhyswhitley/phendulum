@@ -3,8 +3,9 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from os.path import expanduser
-from scipy.optimize import leastsq
+import re
+from os import listdir
+from scipy.optimize import leastsq, curve_fit, minimize
 from scipy.ndimage import gaussian_filter
 
 # Models
@@ -21,14 +22,8 @@ def sig_mod(par,x):
     return 1/(1+np.exp(k3*x - k4))
 
 # Cost functions
-def lin_residuals(par,y,x):
-    return y-lin_mod(par,x)
-
-def exp_residuals(par,y,x):
-    return y-exp_mod(par,x)
-
-def sig_residuals(par,y,x):
-    return y-sig_mod(par,x)
+def min_chi2(fun,y,x):
+    return lambda par: ((fun(par,x)-y)**2).sum()
 
 # Plot functions
 def plot_smooth_swc(xraw, xmes):
@@ -39,7 +34,7 @@ def plot_smooth_swc(xraw, xmes):
     ax1.set_ylabel(r'$\theta_{s}$', fontsize=18)
     ax2.set_ylabel(r'$\sigma$', fontsize=18)
     ax2.set_xlabel('Days since 1-Jan-2008')
-    plt.savefig(figs_path+"swc_smoothed.pdf")
+    plt.savefig(opath+"swc_smoothed.pdf")
     plt.close(fig)
 
 def plot_grass_predict(yraw, ymes):
@@ -51,7 +46,7 @@ def plot_grass_predict(yraw, ymes):
     plt.legend(loc=1)
     plt.xlabel('Days since 1-Jan-2008')
     plt.ylabel('NDVI')
-    plt.savefig(figs_path+"ndvi_corrected.pdf")
+    plt.savefig(opath+"ndvi_corrected.pdf")
     plt.close(fig)
 
 def plot_inflexion_points(ymes, yd, ydd):
@@ -64,15 +59,22 @@ def plot_inflexion_points(ymes, yd, ydd):
     ax2.set_xlabel('Days since 1-Jan-2008')
     ax2.axis([1,1.9e3,-6e-3,6e-3])
     ax2.legend(loc=1)
-    plt.savefig(figs_path+"swc_turningpoints.pdf")
+    plt.savefig(opath+"swc_turningpoints.pdf")
     plt.close(fig)
 
+
+    # Get all EC files in the folder above
+
+# Other functions
+def get_site_name(ec_files):
+    file_name = re.compile('^\w+').findall(ec_files)
+    split_name = re.split('_',file_name[0])
+    return split_name[-2]
 
 # Main
 def main(file_path, xlabel="SWC10", ylabel="NDVI250X"):
     # Import data
-    show_plot = False
-    sp_data = pd.read_csv( expanduser(file_path) )
+    sp_data = pd.read_csv(file_path)
 
     # Smooth out soil moisture to get the averaged concurrent point matching the
     # inflexion points in the NDVI data
@@ -81,7 +83,6 @@ def main(file_path, xlabel="SWC10", ylabel="NDVI250X"):
     if show_plot==True:
         plot_smooth_swc(xraw, xmes)
 
-    # Fix the bugger-up with the tail of the NDVI data
     # Rough idea to remove trees
     yraw = sp_data[ylabel]
     ymes = yraw - min(yraw)
@@ -103,33 +104,29 @@ def main(file_path, xlabel="SWC10", ylabel="NDVI250X"):
 
     # Put these in a dataframe to filter sp_data_new
     ydiff = pd.DataFrame({'yd1':yd,'yd2':ydd})
-    # Tolerance control on what points to extract
-    tol = 1e-2
     upper = max(ydd[20:(len(ydd)-20)])*tol
     lower = min(ydd[20:(len(ydd)-20)])*tol
     sp_data_filt = sp_data_new.loc[(ydiff['yd1']<upper) & (ydiff['yd1']>lower)]
 
+    if len(sp_data_filt.index) <= 1:
+        print "ERROR: Tolerance is too high :: not enough data to optimize on"
+        return None
+
     # Least squares minimization solution to explaining the relationship between
     # the extrema of SWC and NDVI
     # create a set of Parameters
-    lin0 = [1]
-    exp0 = [1,1]
-    sig0 = [1,0]
     xobs = sp_data_filt[xlabel]
     yobs = sp_data_filt[ylabel]
-    lin_res = leastsq( lin_residuals, lin0, args=(yobs,xobs) )
-    exp_res = leastsq( exp_residuals, exp0, args=(yobs,xobs) )
-    sig_res = leastsq( sig_residuals, sig0, args=(yobs,xobs) )
 
-    print sig_res
-
-    # Save the parameter estimates to a CSV table
+    lin_res = minimize( min_chi2(lin_mod,yobs,xobs), 1 )
+    exp_res = minimize( min_chi2(exp_mod,yobs,xobs), [1,1] )
+    sig_res = minimize( min_chi2(sig_mod,yobs,xobs), [1,2] )
 
     # Create vectors for model fits
     xs = np.arange(0,0.3,1e-3)
-    ndvi_lin = lin_mod( lin_res[0], xs )
-    ndvi_exp = exp_mod( exp_res[0], xs )
-    ndvi_sig = exp_mod( sig_res[0], xs )
+    ndvi_lin = lin_mod( lin_res['x'], xs )
+    ndvi_exp = exp_mod( exp_res['x'], xs )
+    ndvi_sig = sig_mod( sig_res['x'], xs )
 
     # Plot the results
     plt.plot( sp_data_filt[xlabel], sp_data_filt[ylabel], 'o', color='black' )
@@ -139,13 +136,27 @@ def main(file_path, xlabel="SWC10", ylabel="NDVI250X"):
     plt.xlabel(r'$\theta_{s 10cm}$', fontsize=18)
     plt.ylabel('NDVI')
     plt.legend(loc=2)
-    plt.axis([0,0.25,0,0.5])
-    plt.savefig(figs_path+"phen_fe_fit.pdf")
+    #plt.axis([0,0.25,0,0.5])
+    plt.savefig(opath+"_phen_fe_fit.pdf")
+    plt.close()
+
+    return {'lin':lin_res, 'exp':exp_res, 'sig':sig_res}
 
 if __name__ == '__main__':
 
-    figs_path = "../figs/"
-    file_path = "../data/filtered_SturtPlains_v12.csv"
+    out_path = "../data/"
+    fig_path = "../figs/"
+    includes = r'^filtered.*'
+    get_files = [ f for f in listdir(out_path) if re.match(includes,f) ]
+    show_plot = False
+    # Tolerance control on what points to extract around the extrema
+    tol = 1e-1
 
-    main(file_path)
+    for i_file in get_files:
+        site = get_site_name(i_file)
+        print "Fitting forcing for => "+ site
+        opath = fig_path+site
+        fpath = out_path+i_file
+        fopt = main(fpath)
+        print fopt
 
