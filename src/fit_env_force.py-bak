@@ -9,7 +9,7 @@ from scipy.optimize import minimize
 from scipy.ndimage import gaussian_filter
 from numpy import linalg as la
 
-# Functions
+# Models
 def lin_mod(par,x):
     k0 = par
     return k0*x
@@ -23,7 +23,6 @@ def sig_mod(par,x):
     return 1/(1+np.exp(k3*x - k4))
 
 # Cost functions
-
 def min_chi2(fun,y,x):
     return lambda par: ((fun(par,x)-y)**2).sum()
 
@@ -82,28 +81,7 @@ def get_site_name(ec_files):
     split_name = re.split('_',file_name[0])
     return split_name[-2]
 
-def get_all_site_names(ec_files):
-    # list comprehensive way of getting all names in bulk
-    file_name = [ re.compile('^\w+').findall(f) for f in ec_files ]
-    split_name = [ re.split('_',f) for f in sum(file_name,[]) ]
-    name_ver = [ sublist[-2] for sublist in split_name ]
-    return name_ver
-
 # Main
-def import_data(dat_path):
-    includes = r'^filtered.*'
-    file_names = [ f for f in listdir(dat_path) if re.match(includes,f) ]
-    datasets = [ pd.read_csv(dat_path+x) for x in file_names ]
-    site_names = get_all_site_names( file_names )
-    # has to be easier way than this
-    site_repeat = [ [pd.DataFrame([site]*len(sublist),index=sublist.index) for site in site_names] for sublist in datasets ]
-    print type(site_repeat)
-    return site_repeat
-
-
-    #return pd.concat(import_files)
-
-
 def main(file_path, xlabel="SWC10", ylabel="NDVI250X"):
     # Import data
     sp_data = pd.read_csv(file_path)
@@ -186,15 +164,14 @@ if __name__ == '__main__':
     # Tolerance control on what points to extract around the extrema
     tol = 1e-1
 
-    print import_data(dat_path)
-#    all_res = pd.DataFrame([])
-#    for i_file in get_files:
-#        site = get_site_name(i_file)
-#        print "Fitting forcing for => "+ site
-#        opath = fig_path+site
-#        fpath = dat_path+i_file
-#        f_opt = main(fpath)
-#        all_res = all_res.append(f_opt)
-#    all_res.to_csv(out_path+"ind_sigmod_par.csv", index_label='k', columns=('value','error','site'))
+    all_res = pd.DataFrame([])
+    for i_file in get_files:
+        site = get_site_name(i_file)
+        print "Fitting forcing for => "+ site
+        opath = fig_path+site
+        fpath = dat_path+i_file
+        f_opt = main(fpath)
+        all_res = all_res.append(f_opt)
+    all_res.to_csv(out_path+"ind_sigmod_par.csv", index_label='k', columns=('value','error','site'))
 
 
