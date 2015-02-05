@@ -90,18 +90,26 @@ def get_all_site_names(ec_files):
     return name_ver
 
 # Main
-def import_data(dat_path):
-    includes = r'^filtered.*'
+def import_data(dat_path, includes=r'^filtered.*'):
+    """Function reads in datasets stored in the /data folder in the upper
+    directory, attaches site names based on a regex search on the file names
+    and concatenates the list of datasets into one Pandas dataframe for
+    analysis"""
+    # get file names
     file_names = [ f for f in listdir(dat_path) if re.match(includes,f) ]
+    # read files in
     datasets = [ pd.read_csv(dat_path+x) for x in file_names ]
+    # find site names
     site_names = get_all_site_names( file_names )
-    # has to be easier way than this
-    site_repeat = [ [pd.DataFrame([site]*len(sublist),index=sublist.index) for site in site_names] for sublist in datasets ]
-    print type(site_repeat)
-    return site_repeat
+    # attach site names relating to each imported dataset
+    for i, df in enumerate(datasets):
+        df['site'] = site_names[i]
+    # concatenate and return final dataframe
+    return pd.concat(datasets)
 
+def filter_data(df):
 
-    #return pd.concat(import_files)
+    return None
 
 
 def main(file_path, xlabel="SWC10", ylabel="NDVI250X"):
@@ -180,13 +188,13 @@ if __name__ == '__main__':
     dat_path = "../data/"
     fig_path = "../figs/"
     out_path = "../outputs/"
-    includes = r'^filtered.*'
-    get_files = [ f for f in listdir(dat_path) if re.match(includes,f) ]
     show_plot = False
     # Tolerance control on what points to extract around the extrema
     tol = 1e-1
 
-    print import_data(dat_path)
+    big_data = import_data(dat_path)
+
+
 #    all_res = pd.DataFrame([])
 #    for i_file in get_files:
 #        site = get_site_name(i_file)
