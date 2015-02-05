@@ -45,20 +45,19 @@ def plot_smooth_swc(xraw, xmes):
     ax1.set_ylabel(r'$\theta_{s}$', fontsize=18)
     ax2.set_ylabel(r'$\sigma$', fontsize=18)
     ax2.set_xlabel('Days since 1-Jan-2008')
-    plt.savefig(opath+"swc_smoothed.pdf")
-    plt.close(fig)
+#    plt.savefig(opath+"swc_smoothed.pdf")
+#    plt.close(fig)
 
-def plot_grass_predict(yraw, ymes):
+def plot_grass_predict(df, yraw, ymes):
     yraw = df["NDVI250X"]
     ymes = df["NDVI250X_Grass"]
-    fig = plt.figure()
     plt.plot( yraw, '-', color='lightblue', label='Total')
     plt.plot( ymes, '-', color='blue', lw=2, label='Grass' )
     plt.legend(loc=1)
     plt.xlabel('Days since 1-Jan-2008')
     plt.ylabel('NDVI')
-    plt.savefig(opath+"ndvi_corrected.pdf")
-    plt.close(fig)
+#    plt.savefig(opath+"ndvi_corrected.pdf")
+#    plt.close(fig)
 
 def plot_inflexion_points(ymes, yd, ydd):
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
@@ -67,23 +66,35 @@ def plot_inflexion_points(ymes, yd, ydd):
     ax2.plot( ydd, color='blue', lw=2, label="$d^2x/dt^2$" )
     ax1.set_ylabel('NDVI signal')
     ax2.set_ylabel(r'$x_{t+1}-x_{t}$', fontsize=16)
-    ax2.set_xlabel('Days since 1-Jan-2008')
-    ax2.axis([1,1.9e3,-6e-3,6e-3])
+    ax2.set_xlabel('Time-series (t)')
+    ax2.axis([1,len(ymes),-6e-3,6e-3])
     ax2.legend(loc=1)
-    plt.savefig(opath+"swc_turningpoints.pdf")
-    plt.close(fig)
+    plt.show()
+    #plt.savefig(opath+"swc_turningpoints.pdf")
+    #plt.close(fig)
 
+def plot_force_optfits(dataset, p_table, \
+                       xlabel="SWC_smooth", ylabel="NDVI_grass"):
+    # Create vectors for model fits
+    xs = np.arange(0,0.3,1e-3)
+    ndvi_lin = lin_mod( p_table[p_table["lin"]]['value'], xs )
+    ndvi_exp = exp_mod( p_table[p_table["exp"]]['value'], xs )
+    ndvi_sig = sig_mod( p_table[p_table["sig"]]['value'], xs )
 
-    # Get all EC files in the folder above
-
-# Other functions
-def get_site_name(ec_files):
-    file_name = re.compile('^\w+').findall(ec_files)
-    split_name = re.split('_',file_name[0])
-    return split_name[-2]
+    # Plot the results
+    plt.plot( dataset[xlabel], dataset[ylabel], 'o', color='black' )
+    plt.plot( xs, ndvi_lin, linestyle='-', color='red', lw=2, label=r"$k_{0}\theta_{s}$" )
+    plt.plot( xs, ndvi_exp, linestyle='-', color='blue', lw=2, label=r"$k_{1}\exp(k_{2}\theta_{s})$" )
+    plt.plot( xs, ndvi_sig, linestyle='-', color='purple', lw=2, label=r"$(1+\exp(k_{3}\theta_{s}-k_{4}))^{-1}$" )
+    plt.xlabel(r'$\theta_{s 10cm}$', fontsize=18)
+    plt.ylabel('NDVI')
+    plt.legend(loc=2)
+    #plt.axis([0,0.25,0,0.5])
+    #plt.savefig(opath+"_phen_fe_fit.pdf")
+    #plt.close()
+    plt.show()
 
 def get_all_site_names(ec_files):
-    # list comprehensive way of getting all names in bulk
     file_name = [ re.compile('^\w+').findall(f) for f in ec_files ]
     split_name = [ re.split('_',f) for f in sum(file_name,[]) ]
     name_ver = [ sublist[-2] for sublist in split_name ]
@@ -91,10 +102,12 @@ def get_all_site_names(ec_files):
 
 # Main
 def import_data(dat_path, includes=r'^filtered.*'):
-    """Function reads in datasets stored in the /data folder in the upper
+    """
+    Function reads in datasets stored in the /data folder in the upper
     directory, attaches site names based on a regex search on the file names
     and concatenates the list of datasets into one Pandas dataframe for
-    analysis"""
+    analysis
+    """
     # get file names
     file_names = [ f for f in listdir(dat_path) if re.match(includes,f) ]
     # read files in
@@ -103,85 +116,94 @@ def import_data(dat_path, includes=r'^filtered.*'):
     site_names = get_all_site_names( file_names )
     # attach site names relating to each imported dataset
     for i, df in enumerate(datasets):
-        df['site'] = site_names[i]
+        df['Site'] = site_names[i]
     # concatenate and return final dataframe
-    return pd.concat(datasets)
+    return datasets
 
-def filter_data(df):
+def grass_correct_data(dataset, xvar="SWC10", yvar="NDVI250X"):
+    """
+    Function filters data to enable a better approximation of the
+    environmental forcing that drives the momentum of the pendulum. In this
+    case we have smoothed the soil moisture response to reduce the number of
+    extrema points and better align with the extrema in the NDVI time-series
+    """
+    x_raw = dataset[xvar]
+    y_raw = dataset[yvar]
+    # smooth SMC to obtain more identifiable extrema points (removes noise)
+    x_approx = gaussian_filter(x_raw, 10)
+    # adjust NDVI by subtracting minimum time-series value to approximate grasses
+    y_approx = y_raw - min(y_raw)
+    # assign new values as extra columns to the dataframe
+    dataset['SWC_smooth'] = x_approx
+    dataset['NDVI_grass'] = y_approx
+    # return to user
+    return dataset
 
+def find_ts_extrema(dataset, var="NDVI_grass"):
+    """
+    Finds the maxima and minima or turning points of a time-series
+    """
+    # Find the inflexion points in the NDVI time-series
+    dataset['dy1/dt1'] = dataset[var].shift(1).fillna(0)-dataset[var]
+    dataset['dy2/dt2'] = dataset['dy1/dt1'].shift(1).fillna(0)-dataset['dy1/dt1']
+    return dataset
+
+def get_extrema_points(dataset, tol=1e-2):
+    """
+    Extract data points along the dy/dx time-series that intersects with the
+    dy2/dx2 time-series. This should approximate points that occur around the
+    extrema of the dependent variable time-series
+    """
+    # Put these in a dataframe to filter sp_data_new
+    upper = max(dataset["dy2/dt2"].ix[2:])*tol
+    lower = min(dataset["dy2/dt2"].ix[2:])*tol
+    dataset_ex = dataset.loc[(dataset['dy1/dt1']<upper) & (dataset['dy1/dt1']>lower)]
+    if len(dataset_ex.index) <= 1:
+        print "ERROR: Tolerance is too high :: not enough data to optimize on"
+        return None
+    else:
+        return dataset_ex
+
+def df_pop_site(dseries):
+    """
+    Return unique key values from dictionary
+    """
+    return [ s for s in set(dseries) ]
+
+def create_label(dseries):
+    """
+    If there is more than one unique label value, then take the first two
+    characters and join them into a new string with an underscore linker.
+    Otherwise just return the singular name as the label.
+    """
+    sites = df_pop_site(dseries)
+    if len(sites) > 1:
+        prefix = [ char[:2] for char in sites ]
+        return '_'.join(prefix)
+    else:
+        return sites.pop()
+
+def approx_optim_force(extrema_df, f_mod, p0=[1,2], xlabel="SWC_smooth", ylabel="NDVI_grass"):
+    """
+    This function acts as wrapper to fit some arbitrary univariate model given
+    X and Y data series. Some dataframe is passed and the two variables of
+    interest are extracted based on the two label values, and then optimised
+    on. Returns tabular dataframe giving parameter estimates and their errors.
+    """
+    xobs = extrema_df[xlabel]
+    yobs = extrema_df[ylabel]
+    sig_res = minimize( min_chi2(f_mod, yobs, xobs), p0 )
+    sig_err = get_errors(sig_res, len(yobs))
+    site_lab = create_label(extrema_df["Site"])
+    return pd.DataFrame({'site':site_lab, 'value':sig_res['x'], 'error':sig_err})
+
+def build_report():
     return None
 
 
-def main(file_path, xlabel="SWC10", ylabel="NDVI250X"):
-    # Import data
-    sp_data = pd.read_csv(file_path)
+def main(file_path):
 
-    # Smooth out soil moisture to get the averaged concurrent point matching the
-    # inflexion points in the NDVI data
-    xraw = sp_data[xlabel]
-    xmes = gaussian_filter(xraw, 10)
-    if show_plot==True:
-        plot_smooth_swc(xraw, xmes)
-
-    # Rough idea to remove trees
-    yraw = sp_data[ylabel]
-    ymes = yraw - min(yraw)
-    if show_plot==True:
-        plot_grass_predict(yraw, ymes)
-
-    # From the above two techniques, create a new dataframe for the filtered
-    # versions of SWC and NDVI
-    sp_data_new = pd.DataFrame({'SWC10':xmes, 'NDVI250X':ymes})
-
-    # Find the inflexion points in the NDVI time-series
-    yd = [0 for j in range(len(ymes))]
-    ydd = [0 for j in range(len(ymes))]
-    for i in range(len(ymes)-1):
-        yd[i+1] = ymes[i+1] - ymes[i]
-        ydd[i+1] = yd[i+1] - yd[i]
-    if show_plot==True:
-        plot_inflexion_points(ymes, yd, ydd)
-
-    # Put these in a dataframe to filter sp_data_new
-    ydiff = pd.DataFrame({'yd1':yd,'yd2':ydd})
-    upper = max(ydd[20:(len(ydd)-20)])*tol
-    lower = min(ydd[20:(len(ydd)-20)])*tol
-    sp_data_filt = sp_data_new.loc[(ydiff['yd1']<upper) & (ydiff['yd1']>lower)]
-
-    if len(sp_data_filt.index) <= 1:
-        print "ERROR: Tolerance is too high :: not enough data to optimize on"
-        return None
-
-    # Least squares minimization solution to explaining the relationship between
-    # the extrema of SWC and NDVI
-    # create a set of Parameters
-    xobs = sp_data_filt[xlabel]
-    yobs = sp_data_filt[ylabel]
-
-    lin_res = minimize( min_chi2(lin_mod,yobs,xobs), 1 )
-    exp_res = minimize( min_chi2(exp_mod,yobs,xobs), [1,1] )
-    sig_res = minimize( min_chi2(sig_mod,yobs,xobs), [1,2] )
-    sig_err = get_errors(sig_res, len(yobs))
-
-    # Create vectors for model fits
-    xs = np.arange(0,0.3,1e-3)
-    ndvi_lin = lin_mod( lin_res['x'], xs )
-    ndvi_exp = exp_mod( exp_res['x'], xs )
-    ndvi_sig = sig_mod( sig_res['x'], xs )
-
-    # Plot the results
-    plt.plot( sp_data_filt[xlabel], sp_data_filt[ylabel], 'o', color='black' )
-    plt.plot( xs, ndvi_lin, linestyle='-', color='red', lw=2, label=r"$k_{0}\theta_{s}$" )
-    plt.plot( xs, ndvi_exp, linestyle='-', color='blue', lw=2, label=r"$k_{1}\exp(k_{2}\theta_{s})$" )
-    plt.plot( xs, ndvi_sig, linestyle='-', color='purple', lw=2, label=r"$(1+\exp(k_{3}\theta_{s}-k_{4}))^{-1}$" )
-    plt.xlabel(r'$\theta_{s 10cm}$', fontsize=18)
-    plt.ylabel('NDVI')
-    plt.legend(loc=2)
-    #plt.axis([0,0.25,0,0.5])
-    plt.savefig(opath+"_phen_fe_fit.pdf")
-    plt.close()
-
-    return pd.DataFrame({'site':site, 'value':sig_res['x'], 'error':sig_err})
+    return None
 
 if __name__ == '__main__':
 
@@ -190,19 +212,35 @@ if __name__ == '__main__':
     out_path = "../outputs/"
     show_plot = False
     # Tolerance control on what points to extract around the extrema
-    tol = 1e-1
+    mytol = 1e-1
 
-    big_data = import_data(dat_path)
+    # import data as a list of dataframes
+    raw_data = import_data(dat_path)
 
+    # manipulate data
+    cor_data = map(grass_correct_data, raw_data)
+    new_data = map(find_ts_extrema, cor_data)
+    ind_data = map(lambda x: get_extrema_points(x, tol=mytol), new_data)
+    all_data = pd.concat(ind_data)
 
-#    all_res = pd.DataFrame([])
-#    for i_file in get_files:
-#        site = get_site_name(i_file)
-#        print "Fitting forcing for => "+ site
-#        opath = fig_path+site
-#        fpath = dat_path+i_file
-#        f_opt = main(fpath)
-#        all_res = all_res.append(f_opt)
-#    all_res.to_csv(out_path+"ind_sigmod_par.csv", index_label='k', columns=('value','error','site'))
+    # now do optimization
 
+    # all sites
+    all_res = approx_optim_force( all_data, sig_mod )
+
+    # out of sample sites [make this functional]
+    sites = df_pop_site(all_data["Site"])
+    out_res = []
+    for i in sites:
+        fit_data = all_data.query('Site != i')
+        out_res.append(approx_optim_force(fit_data, sig_mod))
+    foo = pd.concat(out_res)
+
+    # individual sites
+    ind_res = pd.concat( map( lambda x: approx_optim_force(x, sig_mod), ind_data ) )
+    # join
+
+    bar = pd.concat([all_res,ind_res,out_res])
+    #bar = pd.concat([all_res,ind_res]+out_res)
+    print bar
 
