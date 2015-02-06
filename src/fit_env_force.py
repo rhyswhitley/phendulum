@@ -89,8 +89,7 @@ def plot_force_optfits(dataset, p_table, \
     plt.xlabel(r'$\theta_{s 10cm}$', fontsize=18)
     plt.ylabel('NDVI')
     plt.legend(loc=2)
-    #plt.axis([0,0.25,0,0.5])
-    #plt.savefig(opath+"_phen_fe_fit.pdf")
+    #plt.axis([0,0.25,0,0.5]) #plt.savefig(opath+"_phen_fe_fit.pdf")
     #plt.close()
     plt.show()
 
@@ -213,7 +212,6 @@ if __name__ == '__main__':
     show_plot = False
     # Tolerance control on what points to extract around the extrema
     mytol = 1e-1
-
     # import data as a list of dataframes
     raw_data = import_data(dat_path)
 
@@ -232,7 +230,7 @@ if __name__ == '__main__':
     sites = df_pop_site(all_data["Site"])
     out_res = []
     for i in sites:
-        fit_data = all_data.query('Site != i')
+        fit_data = all_data.query("Site != 'i'")
         out_res.append(approx_optim_force(fit_data, sig_mod))
     foo = pd.concat(out_res)
 
