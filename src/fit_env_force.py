@@ -93,6 +93,9 @@ def plot_force_optfits(dataset, p_table, \
     #plt.close()
     plt.show()
 
+def build_report():
+    return None
+
 def get_all_site_names(ec_files):
     file_name = [ re.compile('^\w+').findall(f) for f in ec_files ]
     split_name = [ re.split('_',f) for f in sum(file_name,[]) ]
@@ -196,13 +199,35 @@ def approx_optim_force(extrema_df, f_mod, p0=[1,2], xlabel="SWC_smooth", ylabel=
     site_lab = create_label(extrema_df["Site"])
     return pd.DataFrame({'site':site_lab, 'value':sig_res['x'], 'error':sig_err})
 
-def build_report():
-    return None
+def optimize_all_comb(dataset):
+    # ensemble optimisation
+    all_data = pd.concat(dataset)
+    all_res = approx_optim_force( all_data, sig_mod )
+    # out-of-sample optimisation
+    sites = df_pop_site(all_data["Site"])
+    out_res = []
+    for i in sites:
+        out_res.append( approx_optim_force( all_data.query("Site != 'i'"), sig_mod ) )
+    # in-sample optimisation
+    ind_res = pd.concat( map( lambda x: approx_optim_force(x, sig_mod), dataset ) )
+    # join all tables of optimisation combinations and return
+    return pd.concat([all_res,ind_res]+out_res)
 
 
-def main(file_path):
+def main():
 
-    return None
+    # import data as a list of dataframes
+    raw_data = import_data(dat_path)
+
+    # manipulate data
+    cor_data = map(grass_correct_data, raw_data)
+    new_data = map(find_ts_extrema, cor_data)
+    ind_data = map(lambda x: get_extrema_points(x, tol=mytol), new_data)
+
+    # now do optimization
+    par_table = optimize_all_comb(ind_data)
+
+    par_table.to_csv(out_path+"sigmoid_forcing.csv", index_label="k", columns=["value","error","site"])
 
 if __name__ == '__main__':
 
@@ -212,33 +237,7 @@ if __name__ == '__main__':
     show_plot = False
     # Tolerance control on what points to extract around the extrema
     mytol = 1e-1
-    # import data as a list of dataframes
-    raw_data = import_data(dat_path)
 
-    # manipulate data
-    cor_data = map(grass_correct_data, raw_data)
-    new_data = map(find_ts_extrema, cor_data)
-    ind_data = map(lambda x: get_extrema_points(x, tol=mytol), new_data)
-    all_data = pd.concat(ind_data)
+    main()
 
-    # now do optimization
-
-    # all sites
-    all_res = approx_optim_force( all_data, sig_mod )
-
-    # out of sample sites [make this functional]
-    sites = df_pop_site(all_data["Site"])
-    out_res = []
-    for i in sites:
-        fit_data = all_data.query("Site != 'i'")
-        out_res.append(approx_optim_force(fit_data, sig_mod))
-    foo = pd.concat(out_res)
-
-    # individual sites
-    ind_res = pd.concat( map( lambda x: approx_optim_force(x, sig_mod), ind_data ) )
-    # join
-
-    bar = pd.concat([all_res,ind_res,foo])
-    #bar = pd.concat([all_res,ind_res]+out_res)
-    print bar
 
