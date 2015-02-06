@@ -240,7 +240,7 @@ if __name__ == '__main__':
     ind_res = pd.concat( map( lambda x: approx_optim_force(x, sig_mod), ind_data ) )
     # join
 
-    bar = pd.concat([all_res,ind_res,out_res])
+    bar = pd.concat([all_res,ind_res,foo])
     #bar = pd.concat([all_res,ind_res]+out_res)
     print bar
 
