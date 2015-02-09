@@ -3,9 +3,10 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import datetime, time, re
+import datetime, time
 # import our own modules
 import data_handling as _dh
+import model_optim_extras as _mo
 import springDynamics as _sd
 
 __author__ = 'Rhys Whitley, Douglas Kelley, Martin De Kauwe'
@@ -37,6 +38,8 @@ def opt_environmental_forcing(raw_data):
     par_table.to_csv(out_path+"sigmoid_forcing.csv", index_label="k", \
                      columns=["Value","Error","Site","Sampling"])
 
+    return new_data
+
 def recast_par_table(tab_im):
     """
     Function accepts a parameter table as derived by the environmental
@@ -63,10 +66,25 @@ def main():
     raw_table = pd.read_csv(tab_path)
 
     # creates the parameter table that describes the environmental forcing used on the spring
-    opt_environmental_forcing(raw_data)
+    data_list = opt_environmental_forcing(raw_data)
 
     # turns the flat parameter table into N-D list of site parameter values at different samplings
     par_list = recast_par_table(raw_table)
+
+    # pass the list of parameter values and time-series data to fitting procedure
+    #assert len(data_list)==len(par_list): "parameter series equals number of imported datasets"
+    #fenv_list = map( lambda x: mo.environ_force(x, mo.sig_mod), par_list )
+    #fenv_list = [ [ mo.environ_force(k,mo.sig_mod) for k in sublist ] for sublist in par_list ]
+    #fenv_list = [ sublist.shape for sublist in par_list ]
+    for ks, data in zip(par_list, data_list):
+        for i in range(len(ks)):
+            print setup_spring( np.array(ks)[i,:], data )
+
+def setup_spring(pars, dataset):
+    mo = _mo.model_optim_extras()
+    Fe = mo.environ_force( pars, mo.sig_mod )
+    return Fe
+
 
 
 if __name__ == '__main__':
@@ -79,7 +97,7 @@ if __name__ == '__main__':
     mytol = 1e-1
     main()
 else:
-    print "FAIL"
+    print "Program FAIL: check config file"
 
 
 
