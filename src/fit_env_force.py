@@ -37,32 +37,36 @@ def opt_environmental_forcing(raw_data):
     par_table.to_csv(out_path+"sigmoid_forcing.csv", index_label="k", \
                      columns=["Value","Error","Site","Sampling"])
 
-def opt_phendulum(raw_data):
-    # import parameters table
-    tab_im = pd.read_csv(tab_path)
+def recast_par_table(tab_im):
+    """
+    Function accepts a parameter table as derived by the environmental
+    forcing procedure and re-casts as a list of parameter values for each
+    sampling type
+    """
     # get the prefixes for each site name (stored in the ensemble site name)
     ens_lab = tab_im.query('Sampling=="ensemble"').Site[0]
     prefix = ens_lab.split("_")
     # add new column to pivot on
     tab_im["Label"] = tab_im["Site"]+"_"+tab_im["Sampling"]
-    # ...and cast it in terms of the site and parameter values (don't worry about errors for now)
-    ptab = tab_im.pivot(index="Label", columns="k", values="Value")
     # now need to group the parameter table into site subsets
-    site_pars = [ [ p for p in ptab.index.values if re.search(x,p) ] for x in prefix ]
-    print tab_im
-    print ptab
-    print tab_im.groupby("Label")
+    tab_sub = map( lambda x: tab_im[tab_im["Site"].str.contains(x)], prefix )
+    # recast the above list of subsets into a list of callable parameters
+    tb_pivot = map( lambda x: x.pivot(index="Label", columns="k", values="Value"), tab_sub )
+    # return to user
+    return tb_pivot
 
 # Main routine
 def main():
     # import data as a list of Pandas dataframes
     raw_data = _dh.data_handling().import_data(dat_path)
+    # import parameters table
+    raw_table = pd.read_csv(tab_path)
 
     # creates the parameter table that describes the environmental forcing used on the spring
     opt_environmental_forcing(raw_data)
 
-    # fits spring to the import parameter table
-    opt_phendulum(raw_data)
+    # turns the flat parameter table into N-D list of site parameter values at different samplings
+    par_list = recast_par_table(raw_table)
 
 
 if __name__ == '__main__':
