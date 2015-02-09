@@ -1,0 +1,6 @@
+# Configuration setup file for folder locations and other model settings
+../data/        # where is the raw data located?
+../figs/        # where shall the figures be saved?
+../outputs/     # where shall the outputs be stored?
+False           # created figures?
+1e-1            # tolerance on turning point collections

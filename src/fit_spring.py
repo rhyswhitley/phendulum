@@ -1,25 +1,13 @@
 #!/usr/bin/env python
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from scipy.optimize import leastsq
-from scipy.ndimage import gaussian_filter
 # our spring dynamics module
 import springDynamics as sd
+import data_handling as dh
+import model_optim_extras as mo
 import sys
 
 # create a partially evaluated function that describes the time-varying force on the pendulum
-def efunc(k):
-    return lambda x: k[0]*np.exp(-k[1]*x)
 
-out_fold = "../data/"
-fig_fold = "../figs/"
-out_name = "filtered"
-site = "SturtPlains"
-version = "_v12"
-fpath = "{0}{1}_{2}{3}.csv".format(out_fold,out_name,site,version)
 
 # import data
 ec_raw = pd.read_csv( fpath, parse_dates=True, index_col=['DT'] )
@@ -70,31 +58,36 @@ y_mod = phenology['x']
 # there's got to be an easier way than having to convert to arrays
 y_res = np.array(y_mod)-np.array(y_grass)
 
-fig = plt.figure(figsize=(10,7))
-# setup plotting grid
-gs = gridspec.GridSpec(3, 1, height_ratios=[2.7,1,1])
-ax1 = fig.add_subplot(gs[0])
-ax2 = fig.add_subplot(gs[1], sharex=ax1)
-ax3 = fig.add_subplot(gs[2], sharex=ax2)
-# remove xlabels on the second and third plots
-plt.setp(ax1.get_xticklabels(), visible=False)
-plt.setp(ax2.get_xticklabels(), visible=False)
-# plot data
-ax1.plot( xs.index, y_grass, color='black', lw=2, label="MODIS" )
-ax1.plot( xs.index, y_mod, color='red', lw=2, label="Pendulum" )
-ax2.plot( xs.index, y_res, '.', color='black', alpha=0.3 )
-ax3.plot( xs.index, xs, color='blue', lw=1.5 )
-# zero line
-ax2.axhline( 0, color='black', linestyle='--' )
-# set axis limits
-ax2.axis([xs.index[0], xs.index[-1], -0.4, 0.4])
-# labels
-ax1.set_ylabel( r"NDVI", fontsize=14 )
-ax2.set_ylabel( r"$\sigma_{NDVI}$", fontsize=18 )
-ax3.set_ylabel( r"$\theta_{s10cm}$", fontsize=18 )
-# legends
-ax1.legend(loc=1)
-ax1.set_title(site, size=20)
-gs.tight_layout(fig, rect=[0, 0, 1, 0.97])
-fig.savefig("../figs/"+site+"_pendulum_fit.pdf")
+def plot_pendulum():
+    fig = plt.figure(figsize=(10,7))
+    # setup plotting grid
+    gs = gridspec.GridSpec(3, 1, height_ratios=[2.7,1,1])
+    ax1 = fig.add_subplot(gs[0])
+    ax2 = fig.add_subplot(gs[1], sharex=ax1)
+    ax3 = fig.add_subplot(gs[2], sharex=ax2)
+    # remove xlabels on the second and third plots
+    plt.setp(ax1.get_xticklabels(), visible=False)
+    plt.setp(ax2.get_xticklabels(), visible=False)
+    # plot data
+    ax1.plot( xs.index, y_grass, color='black', lw=2, label="MODIS" )
+    ax1.plot( xs.index, y_mod, color='red', lw=2, label="Pendulum" )
+    ax2.plot( xs.index, y_res, '.', color='black', alpha=0.3 )
+    ax3.plot( xs.index, xs, color='blue', lw=1.5 )
+    # zero line
+    ax2.axhline( 0, color='black', linestyle='--' )
+    # set axis limits
+    ax2.axis([xs.index[0], xs.index[-1], -0.4, 0.4])
+    # labels
+    ax1.set_ylabel( r"NDVI", fontsize=14 )
+    ax2.set_ylabel( r"$\sigma_{NDVI}$", fontsize=18 )
+    ax3.set_ylabel( r"$\theta_{s10cm}$", fontsize=18 )
+    # legends
+    ax1.legend(loc=1)
+    ax1.set_title(site, size=20)
+    gs.tight_layout(fig, rect=[0, 0, 1, 0.97])
+    fig.savefig("../figs/"+site+"_pendulum_fit.pdf")
+
+if __name__ == "__main__":
+    out_fold = "../data/"
+    fig_fold = "../figs/"
 

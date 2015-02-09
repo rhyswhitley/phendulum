@@ -1,6 +1,5 @@
 #!/usr/bin/env python2
 
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import datetime, time
@@ -21,9 +20,9 @@ class spring(object):
     be water, temperature, etc. driving such phenology.
     """
 
-    def __init__(self, Xt, X_func, k_spring, mass=1, dt=0.07):
+    def __init__(self, k_spring, Xt, XE_force, mass=1, dt=0.07):
         # time-varying inputs
-        self.force_Xt = map( X_func, Xt )
+        self.force_Xt = map( XE_force, Xt )
         self.time = len(Xt)
         # parameters that describe motion
         self.k_hooke, self.k_drag = k_spring
@@ -105,5 +104,3 @@ class spring(object):
 #txf = efunc([1,-0.5])
 #x = spring( tseries, txf, [1,1]  )
 #x.plot_spring_dynamics()
-#
-#
