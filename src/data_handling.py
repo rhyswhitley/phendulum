@@ -18,8 +18,8 @@ __status__ = 'prototype'
 
 class data_handling(object):
 
-    def __init__(self, dat_path=""):
-        self.dpath = dat_path
+    #def __init__(self, dat_path=""):
+    #    self.dpath = dat_path
 
     def import_data(self, dat_path, includes=r'^filtered.*'):
         """
@@ -127,7 +127,7 @@ class data_handling(object):
         sig_res = minimize( mo.min_chi2(f_mod, yobs, xobs), p0 )
         sig_err = mo.get_errors(sig_res, len(yobs))
         site_lab = self.create_label(extrema_df["Site"])
-        return pd.DataFrame({'site':site_lab, 'value':sig_res['x'], 'error':sig_err})
+        return pd.DataFrame({'Site':site_lab, 'Value':sig_res['x'], 'Error':sig_err})
 
     def optimize_all_sites(self, dataset):
         """
@@ -141,15 +141,20 @@ class data_handling(object):
         # ensemble optimisation
         all_data = pd.concat(dataset)
         all_res = self.approx_optim_force( all_data, mo.sig_mod )
-        # out-of-sample optimisation
+        all_res["Sampling"] = "ensemble"
+        # out-of-sample optimisation (horrible syntax has to be a better functional way)
         sites = self.df_pop_site(all_data["Site"])
         out_res = []
-        for i in sites:
-            out_res.append( self.approx_optim_force( all_data.query("Site != 'i'"), \
+        for i,x in enumerate(sites):
+            out_res.append( self.approx_optim_force(all_data.query("Site!=x"), \
                                                     mo.sig_mod ) )
+            out_res[i]["Site"] = sites[i]
+        out_res2 = pd.concat(out_res)
+        out_res2["Sampling"] = "out"
         # in-sample optimisation
         ind_res = pd.concat( map( lambda x: self.approx_optim_force(x, mo.sig_mod), \
                                  dataset ) )
+        ind_res["Sampling"] = "in"
         # join all tables of optimisation combinations and return
-        return pd.concat([all_res,ind_res]+out_res)
+        return pd.concat([all_res,ind_res,out_res2])
 

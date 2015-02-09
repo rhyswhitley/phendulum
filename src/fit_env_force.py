@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import datetime, time
+import datetime, time, re
 # import our own modules
 import data_handling as _dh
 import springDynamics as _sd
@@ -34,23 +35,41 @@ def opt_environmental_forcing(raw_data):
 
     # create a comma delimited table of optimised environmental forcing
     par_table.to_csv(out_path+"sigmoid_forcing.csv", index_label="k", \
-                     columns=["value","error","site"])
+                     columns=["Value","Error","Site","Sampling"])
 
 def opt_phendulum(raw_data):
+    # import parameters table
+    tab_im = pd.read_csv(tab_path)
+    # get the prefixes for each site name (stored in the ensemble site name)
+    ens_lab = tab_im.query('Sampling=="ensemble"').Site[0]
+    prefix = ens_lab.split("_")
+    # add new column to pivot on
+    tab_im["Label"] = tab_im["Site"]+"_"+tab_im["Sampling"]
+    # ...and cast it in terms of the site and parameter values (don't worry about errors for now)
+    ptab = tab_im.pivot(index="Label", columns="k", values="Value")
+    # now need to group the parameter table into site subsets
+    site_pars = [ [ p for p in ptab.index.values if re.search(x,p) ] for x in prefix ]
+    print tab_im
+    print ptab
+    print tab_im.groupby("Label")
 
-
-# Main
+# Main routine
 def main():
     # import data as a list of Pandas dataframes
-    raw_data = _dh.data_handling.import_data(dat_path)
+    raw_data = _dh.data_handling().import_data(dat_path)
 
     # creates the parameter table that describes the environmental forcing used on the spring
     opt_environmental_forcing(raw_data)
+
+    # fits spring to the import parameter table
+    opt_phendulum(raw_data)
+
 
 if __name__ == '__main__':
     dat_path = "../data/"
     fig_path = "../figs/"
     out_path = "../outputs/"
+    tab_path = out_path + "sigmoid_forcing.csv"
     show_plot = False
     # Tolerance control on what points to extract around the extrema
     mytol = 1e-1
