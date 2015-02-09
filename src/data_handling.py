@@ -146,9 +146,7 @@ class data_handling(object):
         sites = self.df_pop_site(all_data["Site"])
         out_res = []
         for i,x in enumerate(sites):
-#            out_res.append( self.approx_optim_force(all_data.query("Site!='x'"), \
-#                                                    mo.sig_mod ) )
-            out_res.append( self.approx_optim_force( all_data.ix[all_data["Site"].str.contains(x),:], \
+            out_res.append( self.approx_optim_force( all_data.ix[~all_data["Site"].str.contains(x),:], \
                                                     mo.sig_mod ) )
             out_res[i]["Site"] = sites[i]
         out_res2 = pd.concat(out_res)
