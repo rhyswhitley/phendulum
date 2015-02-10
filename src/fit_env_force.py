@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime, time
+from scipy.optimize import minimize
 # import our own modules
 import data_handling as _dh
 import model_optim_extras as _mo
@@ -17,7 +18,7 @@ __version__ = '1.0'
 __status__ = 'prototype'
 
 
-def opt_environmental_forcing(raw_data):
+def opt_environmental_forcing(raw_data, find_params=False):
     """
     Determines the environmental forcing that drives the momentum of the system
     (or pendulum). Return a table of fitted parameter values that describe the
@@ -31,14 +32,17 @@ def opt_environmental_forcing(raw_data):
     new_data = map(dh.find_ts_extrema, cor_data)
     ind_data = map(lambda x: dh.get_extrema_points(x, tol=mytol), new_data)
 
-    # now do an optimization on all the imported datasets
-    par_table = dh.optimize_all_sites(ind_data)
+    if find_params:
+        # now do an optimization on all the imported datasets
+        par_table = dh.optimize_all_sites(ind_data)
 
-    # create a comma delimited table of optimised environmental forcing
-    par_table.to_csv(out_path+"sigmoid_forcing.csv", index_label="k", \
-                     columns=["Value","Error","Site","Sampling"])
+        # create a comma delimited table of optimised environmental forcing
+        par_table.to_csv(out_path+"sigmoid_forcing.csv", index_label="k", \
+                        columns=["Value","Error","Site","Sampling"])
+        return new_data
+    else:
+        return new_data
 
-    return new_data
 
 def recast_par_table(tab_im):
     """
@@ -60,6 +64,9 @@ def recast_par_table(tab_im):
 
 # Main routine
 def main():
+
+    mo = _mo.model_optim_extras()
+
     # import data as a list of Pandas dataframes
     raw_data = _dh.data_handling().import_data(dat_path)
     # import parameters table
@@ -69,21 +76,31 @@ def main():
     data_list = opt_environmental_forcing(raw_data)
 
     # turns the flat parameter table into N-D list of site parameter values at different samplings
-    par_list = recast_par_table(raw_table)
+    par_cast = recast_par_table(raw_table)
+    # make sure that the number of grouped parameters in the dataset equals the number of imported datasets
+    assert len(data_list)==len(par_cast), "Number of datasets exceeds the number of available parameter sets"
 
-    # pass the list of parameter values and time-series data to fitting procedure
-    #assert len(data_list)==len(par_list): "parameter series equals number of imported datasets"
-    #fenv_list = map( lambda x: mo.environ_force(x, mo.sig_mod), par_list )
-    #fenv_list = [ [ mo.environ_force(k,mo.sig_mod) for k in sublist ] for sublist in par_list ]
-    #fenv_list = [ sublist.shape for sublist in par_list ]
-    for ks, data in zip(par_list, data_list):
-        for i in range(len(ks)):
-            print setup_spring( np.array(ks)[i,:], data )
+    # transform list of pivot tables into a list of parameter list for each site and sampling
+    par_list = map( lambda x: map(list,np.array(x)), par_cast)
+    # now find expressions for the environmental forcing at each site for each sampling type
+    force_list = [ [ mo.environ_force(k,mo.sig_mod) for k in k_val ] for k_val in par_list ]
+    # create a list of springs based on the above list of forces
+    springs_list = [ [create_spring(f) for f in fs] for fs in force_list ]
+    # now fit these springs to the NDVI time-series for each site
+    spring_coeff = [ [optimise_springs( sub_spring, data) for sub_spring in springs ] for (springs,data) in zip(springs_list,data_list) ]
+    print spring_coeff
+    return None
 
-def setup_spring(pars, dataset):
+
+
+def create_spring(force_on):
+    fx_model = lambda par, X: _sd.spring( par, X, force_on ).calc_dynamics()['x']
+    return fx_model
+
+def optimise_springs(f_springs, dataset, p0=[1,1], ylabel="NDVI_grass", xlabel="SWC10"):
     mo = _mo.model_optim_extras()
-    Fe = mo.environ_force( pars, mo.sig_mod )
-    return Fe
+    spring_res = minimize( mo.min_chi2(f_springs, dataset[ylabel], dataset[xlabel]), p0 )
+    return spring_res['x']
 
 
 
