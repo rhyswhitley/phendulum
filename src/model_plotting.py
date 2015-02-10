@@ -67,3 +67,46 @@ class model_ploting(object):
         ax2.axis([1,len(self.ymes),-6e-3,6e-3])
         ax2.legend(loc=1)
         self.is_plotted(fig, file_name)
+
+#================================================================================
+# Plot results
+#================================================================================
+
+# now assign the optimised coefficients to the pendulum and calculate the motion
+model_fitted = sd.spring( xs, txf, spring_opt[0] )
+phenology = model_fitted.calc_dynamics()
+
+# plot the results
+y_mod = phenology['x']
+# there's got to be an easier way than having to convert to arrays
+y_res = np.array(y_mod)-np.array(y_grass)
+
+def plot_pendulum():
+    fig = plt.figure(figsize=(10,7))
+    # setup plotting grid
+    gs = gridspec.GridSpec(3, 1, height_ratios=[2.7,1,1])
+    ax1 = fig.add_subplot(gs[0])
+    ax2 = fig.add_subplot(gs[1], sharex=ax1)
+    ax3 = fig.add_subplot(gs[2], sharex=ax2)
+    # remove xlabels on the second and third plots
+    plt.setp(ax1.get_xticklabels(), visible=False)
+    plt.setp(ax2.get_xticklabels(), visible=False)
+    # plot data
+    ax1.plot( xs.index, y_grass, color='black', lw=2, label="MODIS" )
+    ax1.plot( xs.index, y_mod, color='red', lw=2, label="Pendulum" )
+    ax2.plot( xs.index, y_res, '.', color='black', alpha=0.3 )
+    ax3.plot( xs.index, xs, color='blue', lw=1.5 )
+    # zero line
+    ax2.axhline( 0, color='black', linestyle='--' )
+    # set axis limits
+    ax2.axis([xs.index[0], xs.index[-1], -0.4, 0.4])
+    # labels
+    ax1.set_ylabel( r"NDVI", fontsize=14 )
+    ax2.set_ylabel( r"$\sigma_{NDVI}$", fontsize=18 )
+    ax3.set_ylabel( r"$\theta_{s10cm}$", fontsize=18 )
+    # legends
+    ax1.legend(loc=1)
+    ax1.set_title(site, size=20)
+    gs.tight_layout(fig, rect=[0, 0, 1, 0.97])
+    fig.savefig("../figs/"+site+"_pendulum_fit.pdf")
+

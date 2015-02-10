@@ -4,8 +4,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime, time
-from scipy.optimize import minimize
-# import our own modules
+# load own modules
 import data_handling as _dh
 import model_optim_extras as _mo
 import springDynamics as _sd
@@ -34,15 +33,16 @@ def opt_environmental_forcing(raw_data, find_params=False):
 
     if find_params:
         # now do an optimization on all the imported datasets
-        par_table = dh.optimize_all_sites(ind_data)
+        par_table = dh.optimize_on_sampling(ind_data)
 
         # create a comma delimited table of optimised environmental forcing
         par_table.to_csv(out_path+"sigmoid_forcing.csv", index_label="k", \
                         columns=["Value","Error","Site","Sampling"])
-        return new_data
+        return [new_data, par_table]
     else:
-        return new_data
-
+        # import parameters table from file
+        file_table = pd.read_csv(tab_path)
+        return [new_data, file_table]
 
 def recast_par_table(tab_im):
     """
@@ -69,11 +69,9 @@ def main():
 
     # import data as a list of Pandas dataframes
     raw_data = _dh.data_handling().import_data(dat_path)
-    # import parameters table
-    raw_table = pd.read_csv(tab_path)
 
     # creates the parameter table that describes the environmental forcing used on the spring
-    data_list = opt_environmental_forcing(raw_data)
+    data_list, raw_table = opt_environmental_forcing(raw_data, find_params=False)
 
     # turns the flat parameter table into N-D list of site parameter values at different samplings
     par_cast = recast_par_table(raw_table)
@@ -83,25 +81,16 @@ def main():
     # transform list of pivot tables into a list of parameter list for each site and sampling
     par_list = map( lambda x: map(list,np.array(x)), par_cast)
     # now find expressions for the environmental forcing at each site for each sampling type
-    force_list = [ [ mo.environ_force(k,mo.sig_mod) for k in k_val ] for k_val in par_list ]
+    force_list = [ [mo.environ_force(k,mo.sig_mod) for k in k_val] for k_val in par_list ]
     # create a list of springs based on the above list of forces
     springs_list = [ [create_spring(f) for f in fs] for fs in force_list ]
     # now fit these springs to the NDVI time-series for each site
-    spring_coeff = [ [optimise_springs( sub_spring, data) for sub_spring in springs ] for (springs,data) in zip(springs_list,data_list) ]
+    spring_coeff = [ [mo.optimise_func( sub_spring, data, p0=[1,1]) for sub_spring in springs] for (springs,data) in zip(springs_list,data_list) ]
     print spring_coeff
-    return None
-
-
 
 def create_spring(force_on):
     fx_model = lambda par, X: _sd.spring( par, X, force_on ).calc_dynamics()['x']
     return fx_model
-
-def optimise_springs(f_springs, dataset, p0=[1,1], ylabel="NDVI_grass", xlabel="SWC10"):
-    mo = _mo.model_optim_extras()
-    spring_res = minimize( mo.min_chi2(f_springs, dataset[ylabel], dataset[xlabel]), p0 )
-    return spring_res['x']
-
 
 
 if __name__ == '__main__':

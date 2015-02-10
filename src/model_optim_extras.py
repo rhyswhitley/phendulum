@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 
+import pandas as pd
 import numpy as np
 import datetime, time
+from scipy.optimize import minimize
+# load own modules
+import data_handling as _dh
 
 __author__ = 'Rhys Whitley, Douglas Kelley, Martin De Kauwe'
 __email__ = 'rhys.whitley@mq.edu.au'
@@ -12,7 +16,6 @@ __status__ = 'prototype'
 
 # Functions
 class model_optim_extras(object):
-
 # Environmental forcing models
     def lin_mod(self, par, x):
         k0 = par
@@ -41,3 +44,18 @@ class model_optim_extras(object):
         coeff = Mp*fmin0/(Nx-Mp)
         return np.sqrt(coeff*H_sol)
 
+# Base optimisation
+    def optimise_func(self, f_mod, dataset, p0=[0,1], ylabel="NDVI_grass", xlabel="SWC10"):
+        """
+        This function acts as wrapper to fit some arbitrary univariate model given
+        X and Y data series. Some dataframe is passed and the two variables of
+        interest are extracted based on the two label values, and then optimised
+        on. Returns tabular dataframe giving parameter estimates and their errors.
+        """
+        dh = _dh.data_handling()
+        yobs = dataset[ylabel]
+        xobs = dataset[xlabel]
+        opt_res = minimize( self.min_chi2(f_mod, yobs, xobs), p0 )
+        opt_err = self.get_errors(opt_res, len(yobs))
+        site_lab = dh.create_label(dataset["Site"])
+        return pd.DataFrame({'Site':site_lab, 'Value':opt_res['x'], 'Error':opt_err})

@@ -6,7 +6,7 @@ import datetime, time
 from os import listdir
 from scipy.optimize import minimize
 from scipy.ndimage import gaussian_filter
-# import our own modules
+# load own modules
 import model_optim_extras as _mo
 
 __author__ = 'Rhys Whitley, Douglas Kelley, Martin De Kauwe'
@@ -113,23 +113,8 @@ class data_handling(object):
         else:
             return sites.pop()
 
-    def approx_optim_force(self, extrema_df, f_mod, p0=[1,2], \
-                           xlabel="SWC_smooth", ylabel="NDVI_grass"):
-        """
-        This function acts as wrapper to fit some arbitrary univariate model given
-        X and Y data series. Some dataframe is passed and the two variables of
-        interest are extracted based on the two label values, and then optimised
-        on. Returns tabular dataframe giving parameter estimates and their errors.
-        """
-        mo = _mo.model_optim_extras()
-        xobs = extrema_df[xlabel]
-        yobs = extrema_df[ylabel]
-        sig_res = minimize( mo.min_chi2(f_mod, yobs, xobs), p0 )
-        sig_err = mo.get_errors(sig_res, len(yobs))
-        site_lab = self.create_label(extrema_df["Site"])
-        return pd.DataFrame({'Site':site_lab, 'Value':sig_res['x'], 'Error':sig_err})
 
-    def optimize_all_sites(self, dataset):
+    def optimize_on_sampling(self, dataset):
         """
         Function does 3 separate optimisations to derive the environmental forcing on
         the pendulum:
@@ -140,21 +125,22 @@ class data_handling(object):
         mo = _mo.model_optim_extras()
         # ensemble optimisation
         all_data = pd.concat(dataset)
-        all_res = self.approx_optim_force( all_data, mo.sig_mod )
+        all_res = mo.optimise_func(mo.sig_mod, all_data)
         all_res["Sampling"] = "ensemble"
         # out-of-sample optimisation (horrible syntax has to be a better functional way)
         sites = self.df_pop_site(all_data["Site"])
+        # ** re-factor this into a list comprehension
         out_res = []
         for i,x in enumerate(sites):
-            out_res.append( self.approx_optim_force( all_data.ix[~all_data["Site"].str.contains(x),:], \
-                                                    mo.sig_mod ) )
+            out_sample = all_data.ix[~all_data["Site"].str.contains(x),:]
+            out_res.append( mo.optimise_func(mo.sig_mod, out_sample) )
             out_res[i]["Site"] = sites[i]
         out_res2 = pd.concat(out_res)
         out_res2["Sampling"] = "out"
         # in-sample optimisation
-        ind_res = pd.concat( map( lambda x: self.approx_optim_force(x, mo.sig_mod), \
+        ind_res = pd.concat( map( lambda x: mo.optimise_func(mo.sig_mod, x), \
                                  dataset ) )
         ind_res["Sampling"] = "in"
         # join all tables of optimisation combinations and return
-        return pd.concat([all_res,ind_res,out_res2])
+        return pd.concat([all_res, ind_res, out_res2])
 
