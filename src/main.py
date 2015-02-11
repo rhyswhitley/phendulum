@@ -88,6 +88,7 @@ def main():
 
     mplots = _mp.model_plotting(fig_path)
     mplots.plot_allSite_forcing(e_force, extd_list, par_cast)
+    mplots.plot_data_manipulation(data_list)
 
     return None
 
