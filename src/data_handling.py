@@ -114,7 +114,7 @@ class data_handling(object):
         else:
             return sites.pop()
 
-    def optimize_on_sampling(self, dataset, f_mod, ylabel, xlabel):
+    def optimize_all_sampling(self, f_mod, dataset, p0, ylabel, xlabel):
         """
         Function does 3 separate optimisations to derive the environmental forcing on
         the pendulum:
@@ -125,7 +125,7 @@ class data_handling(object):
         mo = _mo.model_optim_extras()
         # ensemble optimisation
         all_data = pd.concat(dataset)
-        all_res = mo.optimise_func(f_mod, all_data, [-1,-1], ylabel, xlabel)
+        all_res = mo.optimise_func(f_mod, all_data, p0, ylabel, xlabel)
         all_res["Sampling"] = "ensemble"
         # out-of-sample optimisation (horrible syntax has to be a better functional way)
         sites = self.df_pop_site(all_data["Site"])
@@ -133,12 +133,12 @@ class data_handling(object):
         out_res = []
         for i,x in enumerate(sites):
             out_sample = all_data.ix[~all_data["Site"].str.contains(x),:]
-            out_res.append( mo.optimise_func(f_mod, out_sample, [-1,-1], ylabel, xlabel) )
+            out_res.append( mo.optimise_func(f_mod, out_sample, p0, ylabel, xlabel) )
             out_res[i]["Site"] = sites[i]
         out_res2 = pd.concat(out_res)
         out_res2["Sampling"] = "out"
         # in-sample optimisation
-        ind_res = pd.concat( map( lambda x: mo.optimise_func(f_mod, x, [-10,-1], ylabel, xlabel), \
+        ind_res = pd.concat( map( lambda x: mo.optimise_func(f_mod, x, p0, ylabel, xlabel), \
                                  dataset ) )
         ind_res["Sampling"] = "in"
         # join all tables of optimisation combinations and return
