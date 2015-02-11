@@ -30,6 +30,7 @@ class data_handling(object):
         """
         # get file names
         file_names = [ f for f in listdir(dat_path) if re.match(includes,f) ]
+        assert file_names!=[], "There are no filtered datasets in the "+dat_path+" location: run the filter script first"
         # read files in
         datasets = [ pd.read_csv(dat_path+x) for x in file_names ]
         # find site names
@@ -68,7 +69,7 @@ class data_handling(object):
         dataset['dy2/dt2'] = dataset['dy1/dt1'].shift(1).fillna(0)-dataset['dy1/dt1']
         return dataset
 
-    def get_extrema_points(self, dataset, tol=1e-2):
+    def get_extrema_points(self, dataset, tol=5e-1):
         """
         Extract data points along the dy/dx time-series that intersects with the
         dy2/dx2 time-series. This should approximate points that occur around the
@@ -113,8 +114,7 @@ class data_handling(object):
         else:
             return sites.pop()
 
-
-    def optimize_on_sampling(self, dataset):
+    def optimize_on_sampling(self, dataset, f_mod, ylabel, xlabel):
         """
         Function does 3 separate optimisations to derive the environmental forcing on
         the pendulum:
@@ -125,7 +125,7 @@ class data_handling(object):
         mo = _mo.model_optim_extras()
         # ensemble optimisation
         all_data = pd.concat(dataset)
-        all_res = mo.optimise_func(mo.sig_mod, all_data)
+        all_res = mo.optimise_func(f_mod, all_data, [-1,-1], ylabel, xlabel)
         all_res["Sampling"] = "ensemble"
         # out-of-sample optimisation (horrible syntax has to be a better functional way)
         sites = self.df_pop_site(all_data["Site"])
@@ -133,12 +133,12 @@ class data_handling(object):
         out_res = []
         for i,x in enumerate(sites):
             out_sample = all_data.ix[~all_data["Site"].str.contains(x),:]
-            out_res.append( mo.optimise_func(mo.sig_mod, out_sample) )
+            out_res.append( mo.optimise_func(f_mod, out_sample, [-1,-1], ylabel, xlabel) )
             out_res[i]["Site"] = sites[i]
         out_res2 = pd.concat(out_res)
         out_res2["Sampling"] = "out"
         # in-sample optimisation
-        ind_res = pd.concat( map( lambda x: mo.optimise_func(mo.sig_mod, x), \
+        ind_res = pd.concat( map( lambda x: mo.optimise_func(f_mod, x, [-10,-1], ylabel, xlabel), \
                                  dataset ) )
         ind_res["Sampling"] = "in"
         # join all tables of optimisation combinations and return

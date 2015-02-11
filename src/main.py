@@ -3,7 +3,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import datetime, time
+import datetime, time, re
 # load own modules
 import data_handling as _dh
 import model_optim_extras as _mo
@@ -17,7 +17,7 @@ __version__ = '1.0'
 __status__ = 'prototype'
 
 
-def opt_environmental_forcing(raw_data, find_params=False):
+def opt_environmental_forcing(raw_data, f_mod, find_params=False):
     """
     Determines the environmental forcing that drives the momentum of the system
     (or pendulum). Return a table of fitted parameter values that describe the
@@ -33,7 +33,8 @@ def opt_environmental_forcing(raw_data, find_params=False):
 
     if find_params:
         # now do an optimization on all the imported datasets
-        par_table = dh.optimize_on_sampling(ind_data)
+        par_table = dh.optimize_on_sampling(ind_data, f_mod, ylabel="NDVI_grass", xlabel="SWC_smooth")
+        par_table.index.name = 'k'
 
         # create a comma delimited table of optimised environmental forcing
         par_table.to_csv(out_path+"sigmoid_forcing.csv", index_label="k", \
@@ -41,8 +42,13 @@ def opt_environmental_forcing(raw_data, find_params=False):
         return [new_data, par_table]
     else:
         # import parameters table from file
-        file_table = pd.read_csv(tab_path)
-        return [new_data, file_table]
+        try:
+            file_table = pd.read_csv(tab_path, index_col=0)
+            return [new_data, file_table]
+        except IOError:
+            print "\nNo parameter file exists: will create one now\n"
+            # call recursively; find_params=True is the edge condition
+            return opt_environmental_forcing(raw_data, f_mod, find_params=True)
 
 def recast_par_table(tab_im):
     """
@@ -58,7 +64,7 @@ def recast_par_table(tab_im):
     # now need to group the parameter table into site subsets
     tab_sub = map( lambda x: tab_im[tab_im["Site"].str.contains(x)], prefix )
     # recast the above list of subsets into a list of callable parameters
-    tb_pivot = map( lambda x: x.pivot(index="Label", columns="k", values="Value"), tab_sub )
+    tb_pivot = map( lambda x: x.reset_index().pivot(index="Label", columns="k", values="Value"), tab_sub )
     # return to user
     return tb_pivot
 
@@ -66,17 +72,24 @@ def recast_par_table(tab_im):
 def main():
 
     mo = _mo.model_optim_extras()
+    # set the type of external forcing model here
+    e_force = mo.sig_mod
 
     # import data as a list of Pandas dataframes
     raw_data = _dh.data_handling().import_data(dat_path)
 
     # creates the parameter table that describes the environmental forcing used on the spring
-    data_list, raw_table = opt_environmental_forcing(raw_data, find_params=False)
+    data_list, raw_table = opt_environmental_forcing(raw_data, e_force, find_params=True)
 
     # turns the flat parameter table into N-D list of site parameter values at different samplings
     par_cast = recast_par_table(raw_table)
     # make sure that the number of grouped parameters in the dataset equals the number of imported datasets
     assert len(data_list)==len(par_cast), "Number of datasets exceeds the number of available parameter sets"
+
+    print raw_table
+    [ _plot_forcing( data_i, par_i, e_force ) for data_i, par_i in zip(data_list,par_cast) ]
+    return None
+
 
     # transform list of pivot tables into a list of parameter list for each site and sampling
     par_list = map( lambda x: map(list,np.array(x)), par_cast)
@@ -92,6 +105,31 @@ def create_spring(force_on):
     fx_model = lambda par, X: _sd.spring( par, X, force_on ).calc_dynamics()['x']
     return fx_model
 
+def _plot_models(xs, force, color, label ):
+    plt.plot( xs, force, linestyle='-', lw=2, color=color, label=label )
+
+def _plot_forcing(dataset, kvar, f_mod, \
+                        xlabel="SWC_smooth", ylabel="NDVI_grass", \
+                        file_name = "_phen_fe_fit.pdf"):
+    # Create vectors for model fits
+    xs = np.arange(0,0.3,1e-3)
+
+    # Plot the results
+    col = ['red','blue','green']
+    lab = ['ensemble','in','out']
+    ds = _dh.data_handling().get_extrema_points(dataset)
+    plt.plot( ds[xlabel], ds[ylabel], 'o', color='black' )
+    [ _plot_models( xs, f_mod(ks, xs), color=col[i], label=lab[i] ) for i,ks in enumerate(np.array(kvar)) ]
+    plt.xlabel(r'$\theta_{s 10cm}$', fontsize=18)
+    plt.ylabel('NDVI')
+    plt.legend(loc=2)
+    plt.title(_create_title(dataset["Site"][0]))
+    #plt.axis([0,0.25,0,0.5])
+    #self.is_plotted(fig, file_name)
+    plt.show()
+
+def _create_title(string):
+    return re.sub(r"(\w)([A-Z])", r"\1 \2", string)
 
 if __name__ == '__main__':
     dat_path = "../data/"
@@ -109,28 +147,4 @@ else:
 
 
 
-
-
-def plot_force_optfits(dataset, p_table, fe_mod, \
-                        xlabel="SWC_smooth", ylabel="NDVI_grass", \
-                        file_name = "_phen_fe_fit.pdf"):
-    # Create vectors for model fits
-    xs = np.arange(0,0.3,1e-3)
-#        ndvi_lin = lin_mod( p_table[p_table["lin"]]['value'], xs )
-#        ndvi_exp = exp_mod( p_table[p_table["exp"]]['value'], xs )
-    ndvi_sig = fe_mod( p_table[p_table["sig"]]['value'], xs )
-    # needs to be a list comprehension
-    ndvi_sig
-
-    # Plot the results
-    plt.plot( dataset[xlabel], dataset[ylabel], 'o', color='black' )
-    plt.plot( xs, ndvi_lin, linestyle='-', color='red', lw=2, label=r"$k_{0}\theta_{s}$" )
-    plt.plot( xs, ndvi_exp, linestyle='-', color='blue', lw=2, label=r"$k_{1}\exp(k_{2}\theta_{s})$" )
-    plt.plot( xs, ndvi_sig, linestyle='-', color='purple', lw=2, label=r"$(1+\exp(k_{3}\theta_{s}-k_{4}))^{-1}$" )
-    plt.xlabel(r'$\theta_{s 10cm}$', fontsize=18)
-    plt.ylabel('NDVI')
-    plt.legend(loc=2)
-    #plt.axis([0,0.25,0,0.5])
-    #self.is_plotted(fig, file_name)
-    plt.show()
 

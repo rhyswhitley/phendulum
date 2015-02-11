@@ -27,12 +27,22 @@ class model_optim_extras(object):
         k3, k4 = par
         return 1/(1+np.exp(k3*x - k4))
 
+    def sigma(self, par, y):
+        return par[-1]*y
+
     def environ_force(self, k, fmod):
         return lambda x: fmod(k,x)
 
 # Cost functions
+    def residuals(self, y, x, func, weight):
+        return lambda par: (func(par,x)-y)/weight(par,y)
+
+    def min_chi2_weighted(self, func, weight, y, x):
+        return lambda par: reduce( lambda x, y: (x+y)**2, self.residuals(y, x, func, weight) )
+
     def min_chi2(self, fun, y, x):
         return lambda par: ((fun(par,x)-y)**2).sum()
+
 
 # Standard error calculation
     def get_errors(self, opt_res, Nx):
@@ -44,8 +54,11 @@ class model_optim_extras(object):
         coeff = Mp*fmin0/(Nx-Mp)
         return np.sqrt(coeff*H_sol)
 
+    def get_eigenvalues(self, opt_res):
+        return np.linalg.eigvals(opt_res['hess_inv'])
+
 # Base optimisation
-    def optimise_func(self, f_mod, dataset, p0=[0,1], ylabel="NDVI_grass", xlabel="SWC10"):
+    def optimise_func(self, f_mod, dataset, p0, ylabel, xlabel):
         """
         This function acts as wrapper to fit some arbitrary univariate model given
         X and Y data series. Some dataframe is passed and the two variables of
@@ -57,5 +70,6 @@ class model_optim_extras(object):
         xobs = dataset[xlabel]
         opt_res = minimize( self.min_chi2(f_mod, yobs, xobs), p0 )
         opt_err = self.get_errors(opt_res, len(yobs))
+        opt_eig = self.get_eigenvalues(opt_res)
         site_lab = dh.create_label(dataset["Site"])
-        return pd.DataFrame({'Site':site_lab, 'Value':opt_res['x'], 'Error':opt_err})
+        return pd.DataFrame({'Site':site_lab, 'Value':opt_res['x'], 'Error':opt_err, 'EigVal':opt_eig})
