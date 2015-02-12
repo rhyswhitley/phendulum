@@ -66,7 +66,7 @@ class model_optim_extras(object):
         return np.linalg.eigvals(opt_res['hess_inv'])
 
 # Base optimisation
-    def optimise_func(self, f_mod, dataset, p0, ylabel, xlabel):
+    def optimize_func(self, f_mod, dataset, p0, ylabel, xlabel, site=None):
         """
         This function acts as wrapper to fit some arbitrary univariate model given
         X and Y data series. Some dataframe is passed and the two variables of
@@ -76,13 +76,46 @@ class model_optim_extras(object):
         dh = _dh.data_handling()
         yobs = dataset[ylabel]
         xobs = dataset[xlabel]
-        opt_res = minimize( self.min_chi2(f_mod, yobs, xobs), p0, options={'maxiter':1000} )
+        opt_res = minimize( self.min_chi2(f_mod, yobs, xobs), p0 ) #, options={'maxiter':1000} )
         opt_err = self.get_errors(opt_res, len(yobs))
         opt_eig = self.get_eigenvalues(opt_res)
-        site_lab = dh.create_label(dataset["Site"])
-        return pd.DataFrame({'Site':site_lab, 'Value':opt_res['x'], 'Error':opt_err, 'EigVal':opt_eig})
+        if site is None:
+            site_lab = dh.create_label(dataset["Site"])
+        else:
+            site_lab = site
+        k_table = pd.DataFrame({'Site':site_lab, 'Value':opt_res['x'], 'Error':opt_err, 'EigVal':opt_eig})
+        k_table.index.name = 'k'
+        return k_table
 
 # Out of sample optimisation
     def optimize_out_sample(self, f_mod, dataset, p0, ylabel, xlabel, site):
+        """ Excludes the site in question from the optimisation """
         out_sample = dataset.ix[~dataset["Site"].str.contains(site),:]
-        return self.optimise_func(f_mod, out_sample, p0, ylabel, xlabel)
+        return self.optimize_func(f_mod, out_sample, p0, ylabel, xlabel, site)
+
+# Multi-sampling
+    def optimize_all_sampling(self, f_mod, dataset, p0, ylabel, xlabel):
+        """
+        Function does 3 separate optimisations to derive the environmental forcing on
+        the pendulum:
+            [1] ensemble: or all sites are optimised
+            [2] in-sample: individual sites are optimised
+            [3] out-of-sample: like ensemble but optimises on all sites minus one
+        """
+        # ensemble optimisation
+        all_data = pd.concat(dataset)
+        all_res = self.optimize_func(f_mod, all_data, p0, ylabel, xlabel)
+        all_res["Sampling"] = "ensemble"
+        # out-of-sample optimisation (horrible syntax has to be a better functional way)
+#        sites = _dh.data_handling().df_pop_site(all_data["Site"])
+#        out_res = pd.concat( [ self.optimize_out_sample(f_mod, all_data, p0, ylabel, xlabel, s) \
+#                               for s in sites ] )
+#        out_res["Sampling"] = "out"
+        # in-sample optimisation
+        ind_res = pd.concat( [ self.optimize_func(f_mod, d, p0, ylabel, xlabel) \
+                              for d in dataset ] )
+        ind_res["Sampling"] = "in"
+        # join all tables of optimisation combinations and return
+        #return pd.concat([ind_res, out_res, all_res])
+        return pd.concat([ind_res, all_res])
+

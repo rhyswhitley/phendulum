@@ -4,10 +4,7 @@ import pandas as pd
 import re
 import datetime, time
 from os import listdir
-from scipy.optimize import minimize
 from scipy.ndimage import gaussian_filter
-# load own modules
-import model_optim_extras as _mo
 
 __author__ = 'Rhys Whitley, Douglas Kelley, Martin De Kauwe'
 __email__ = 'rhys.whitley@mq.edu.au'
@@ -17,9 +14,6 @@ __version__ = '1.0'
 __status__ = 'prototype'
 
 class data_handling(object):
-
-    #def __init__(self, dat_path=""):
-    #    self.dpath = dat_path
 
     def import_data(self, dat_path, includes=r'^filtered.*'):
         """
@@ -69,7 +63,7 @@ class data_handling(object):
         dataset['dy2/dt2'] = dataset['dy1/dt1'].shift(1).fillna(0)-dataset['dy1/dt1']
         return dataset
 
-    def get_extrema_points(self, dataset, tol=5e-1):
+    def get_extrema_points(self, dataset, tol=1):
         """
         Extract data points along the dy/dx time-series that intersects with the
         dy2/dx2 time-series. This should approximate points that occur around the
@@ -83,7 +77,7 @@ class data_handling(object):
             print "ERROR: Tolerance is too high :: not enough data to optimize on"
             return None
         else:
-            return dataset_ex
+            return dataset_ex #.ix[:,'SWC_smooth':'NDVI250X']
 
     def get_all_site_names(self, ec_files):
         """
@@ -113,34 +107,4 @@ class data_handling(object):
             return '_'.join(prefix)
         else:
             return sites.pop()
-
-    def optimize_all_sampling(self, f_mod, dataset, p0, ylabel, xlabel):
-        """
-        Function does 3 separate optimisations to derive the environmental forcing on
-        the pendulum:
-            [1] ensemble: or all sites are optimised
-            [2] in-sample: individual sites are optimised
-            [3] out-of-sample: like ensemble but optimises on all sites minus one
-        """
-        mo = _mo.model_optim_extras()
-        # ensemble optimisation
-        all_data = pd.concat(dataset)
-        all_res = mo.optimise_func(f_mod, all_data, p0, ylabel, xlabel)
-        all_res["Sampling"] = "ensemble"
-        # out-of-sample optimisation (horrible syntax has to be a better functional way)
-        sites = self.df_pop_site(all_data["Site"])
-        # ** re-factor this into a list comprehension
-        out_res = []
-        for i,x in enumerate(sites):
-            out_sample = all_data.ix[~all_data["Site"].str.contains(x),:]
-            out_res.append( mo.optimise_func(f_mod, out_sample, p0, ylabel, xlabel) )
-            out_res[i]["Site"] = sites[i]
-        out_res2 = pd.concat(out_res)
-        out_res2["Sampling"] = "out"
-        # in-sample optimisation
-        ind_res = pd.concat( map( lambda x: mo.optimise_func(f_mod, x, p0, ylabel, xlabel), \
-                                 dataset ) )
-        ind_res["Sampling"] = "in"
-        # join all tables of optimisation combinations and return
-        return pd.concat([all_res, ind_res, out_res2])
 
