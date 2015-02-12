@@ -17,6 +17,54 @@ __version__ = '1.0'
 __status__ = 'prototype'
 
 
+def main():
+
+    mo = _mo.model_optim_extras()
+
+    # import data as a list of Pandas dataframes
+    raw_data = _dh.data_handling().import_data(dat_path)
+
+    # creates the parameter table that describes the environmental forcing used 
+    # on the spring
+    (data_list, extd_list, 
+     raw_table) = opt_environmental_forcing(e_force, raw_data, find_params=True)
+
+    # turns the flat parameter table into N-D list of site parameter values at 
+    # different samplings
+    par_cast = recast_par_table(raw_table)
+    
+    # make sure that the number of grouped parameters in the dataset equals the 
+    # number of imported datasets
+    msg = "Number of datasets exceeds the number of available parameter sets"
+    assert len(data_list)==len(par_cast), msg
+
+    print raw_table
+
+    mplots = _mp.model_plotting(fig_path)
+    mplots.plot_allSite_forcing(e_force, extd_list, par_cast)
+    mplots.plot_data_manipulation(data_list)
+
+    return None
+
+
+    # transform list of pivot tables into a list of parameter list for each 
+    # site and sampling
+    par_list = map( lambda x: map(list,np.array(x)), par_cast)
+    
+    # now find expressions for the environmental forcing at each site for each 
+    # sampling type
+    force_list = [ [mo.environ_force(k,mo.sig_mod) for k in k_val] \
+                    for k_val in par_list ]
+    
+    # create a list of springs based on the above list of forces
+    springs_list = [ [create_spring(f) for f in fs] for fs in force_list ]
+    # now fit these springs to the NDVI time-series for each site
+    spring_coeff = [ [mo.optimise_func( sub_spring, data, p0=[1,1]) \
+                        for sub_spring in springs] \
+                        for (springs,data) in zip(springs_list,data_list) ]
+    print spring_coeff
+
+
 def opt_environmental_forcing(f_mod, raw_data, find_params=False):
     """
     Determines the environmental forcing that drives the momentum of the system
@@ -71,53 +119,6 @@ def recast_par_table(tab_im):
     # return to user
     return tb_pivot
 
-# Main routine
-def main():
-
-    mo = _mo.model_optim_extras()
-
-    # import data as a list of Pandas dataframes
-    raw_data = _dh.data_handling().import_data(dat_path)
-
-    # creates the parameter table that describes the environmental forcing used 
-    # on the spring
-    (data_list, extd_list, 
-     raw_table) = opt_environmental_forcing(e_force, raw_data, find_params=True)
-
-    # turns the flat parameter table into N-D list of site parameter values at 
-    # different samplings
-    par_cast = recast_par_table(raw_table)
-    
-    # make sure that the number of grouped parameters in the dataset equals the 
-    # number of imported datasets
-    msg = "Number of datasets exceeds the number of available parameter sets"
-    assert len(data_list)==len(par_cast), msg
-
-    print raw_table
-
-    mplots = _mp.model_plotting(fig_path)
-    mplots.plot_allSite_forcing(e_force, extd_list, par_cast)
-    mplots.plot_data_manipulation(data_list)
-
-    return None
-
-
-    # transform list of pivot tables into a list of parameter list for each 
-    # site and sampling
-    par_list = map( lambda x: map(list,np.array(x)), par_cast)
-    
-    # now find expressions for the environmental forcing at each site for each 
-    # sampling type
-    force_list = [ [mo.environ_force(k,mo.sig_mod) for k in k_val] \
-                    for k_val in par_list ]
-    
-    # create a list of springs based on the above list of forces
-    springs_list = [ [create_spring(f) for f in fs] for fs in force_list ]
-    # now fit these springs to the NDVI time-series for each site
-    spring_coeff = [ [mo.optimise_func( sub_spring, data, p0=[1,1]) \
-                        for sub_spring in springs] \
-                        for (springs,data) in zip(springs_list,data_list) ]
-    print spring_coeff
 
 def create_spring(force_on):
     fx_model = lambda par, X: _sd.spring(par, X, force_on).calc_dynamics()['x']
