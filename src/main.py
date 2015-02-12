@@ -127,8 +127,7 @@ def create_spring(force_on):
 
 if __name__ == '__main__':
     
-    #dat_path = "../data/"
-    dat_path = "/Users/mdekauwe/Dropbox/Dingo_v12/"
+    dat_path = "../data/"
     fig_path = "../figs/"
     out_path = "../outputs/"
     tab_path = out_path + "sigmoid_forcing.csv"

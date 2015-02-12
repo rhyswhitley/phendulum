@@ -87,7 +87,8 @@ def get_all_site_names(ec_files):
     # list comprehensive way of getting all names in bulk
     file_name = [ re.compile('^\w+').findall(f) for f in ec_files ]
     split_name = [ re.split('_',f) for f in sum(file_name,[]) ]
-    name_ver = [[ name for i,name in enumerate(sublist) if (i==3) ] for sublist in split_name ]
+    name_ver = [[ name for i,name in enumerate(sublist) if (i==3) ] \
+                  for sublist in split_name ]
     return sum(name_ver,[])
 
 def get_site_name(ec_files):
