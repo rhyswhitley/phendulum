@@ -35,16 +35,9 @@ def main():
     msg = "Number of datasets exceeds the number of available parameter sets"
     assert len(data_list)==len(par_cast), msg
 
-    print raw_table
-
-    return None
     mplots = _mp.model_plotting(fig_path)
     mplots.plot_allSite_forcing(e_force, extd_list, par_cast)
     mplots.plot_data_manipulation(data_list)
-
-def create_spring(force_on):
-    fx_model = lambda par, X: _sd.spring(par, X, force_on).calc_dynamics()['x']
-    return fx_model
 
 def opt_environmental_forcing(f_mod, raw_data, find_params=False):
     """
@@ -66,7 +59,6 @@ def opt_environmental_forcing(f_mod, raw_data, find_params=False):
         par_table = mo.optimize_all_sampling(f_mod, ind_data, p0=[-10,-3],
                                              ylabel="NDVI_grass",
                                              xlabel="SWC_smooth")
-        par_table.index.name = 'k'
 
         # create a comma delimited table of optimised environmental forcing
         par_table.to_csv(out_path+"sigmoid_forcing.csv", index_label="k",

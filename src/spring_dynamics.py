@@ -38,6 +38,11 @@ class spring(object):
         # drag on pendulum
         return -self.k_drag*v
 
+    def position(self):
+        d2xdt2 = self.force_Xt
+        d1xdt1 = self.k_drag*d2xdt2*self.dt
+        return (d2xdt2 - d1xdt1)/self.k_hooke
+
     def calc_dynamics(self):
         # set zeros (could have empty list) -- ugly either way
         displ       = [0]*self.time

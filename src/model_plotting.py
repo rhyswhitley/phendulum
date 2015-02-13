@@ -133,51 +133,54 @@ class model_plotting(object):
 # Pendulum
 #================================================================================
 
-def plot_allSite_pendulum(self, data_list, par_list, force_list):
-    """
-    Creates a PDF whose pages contain the results that describes the
-    environmental forcing at each site, as well as the forcing based on
-    out-of-site sampling and as an ensemble of all sites.
-    """
-    with PdfPages(self.fpath+'phendulum.pdf') as pdf:
-        # plot all site points as a reference to the ensemble and out-of-sampling fits
-        # plot the optimised site-specific forcing
-        for data, par, force in zip(data_list, par_list, force_list):
-            self._plot_pendulum( data, par, force, pdf )
+    def plot_allSite_pendulum(self, data_list, par_list, f_mod):
+        """
+        Creates a PDF whose pages contain the results that describes the
+        environmental forcing at each site, as well as the forcing based on
+        out-of-site sampling and as an ensemble of all sites.
+        """
+        with PdfPages(self.fpath+'phendulum.pdf') as pdf:
+            # plot all site points as a reference to the ensemble and out-of-sampling fits
+            # plot the optimised site-specific forcing
+            for data, par in zip(data_list, par_list):
+                self._plot_pendulum( data, par, f_mod, pdf )
 
-def _plot_pendulum(self, data, kvar, force, pobj):
+    def _plot_pendulum(self, data, kvar, f_mod, pobj):
 
-    # now assign the optimised coefficients to the pendulum and calculate the motion
-    y_grass = data["NDVI_grass"]
-    x_mes = data["SWC10"]
-    springs = [_sd.spring( kvar, x_mes, f ) for f in force ]
-    phenology = [ s.calc_dynamics() for s in springs ]
-    y_mod = [ p['x'] for p in phenology ]
+        # now assign the optimised coefficients to the pendulum and calculate the motion
+        y_grass = data["NDVI_grass"]
+        x_mes = data["SWC10"]
 
-    site_title = set(data["Site"]).pop()
+        # based on the number of samplings get the prediction of motion
+        springs = [ _sd.spring(k, x_mes, f_mod) for k in np.array(kvar) ]
+        y_mod = [ p.calc_dynamics()['x'] for p in springs ]
+        force_mod = [ f.calc_dynamics()['Fe'] for f in springs ]
+        accel_mod = [ a.calc_dynamics()['a'] for a in springs ]
+        veloc_mod = [ v.calc_dynamics()['v'] for v in springs ]
 
-    fig = plt.figure(figsize=(10,7))
-    # setup plotting grid
-    gs = gridspec.GridSpec(2, 1, height_ratios=[2,1])
-    ax1 = fig.add_subplot(gs[0])
-    ax2 = fig.add_subplot(gs[1], sharex=ax1)
-    # remove xlabels on the second and third plots
-    plt.setp(ax1.get_xticklabels(), visible=False)
-    #plt.setp(ax2.get_xticklabels(), visible=False)
-    # plot data
-    ax1.plot( y_grass, color='black', lw=2, label="MODIS" )
-    [ self._plot_models( x_mes, ymod[i], color=self.col[i], label=self.lab[i] ) for i, ks in enumerate(np.array(k_var)) ]
-    #ax1.plot( y_mod, color='red', lw=2, label="Pendulum" )
-    ax2.plot( x_mes, color='blue', lw=1.5 )
-    # labels
-    ax1.set_ylabel( r"NDVI", fontsize=14 )
-    ax2.set_ylabel( r"$\theta_{s10cm}$", fontsize=18 )
-    # legends
-    ax1.legend(loc=1)
-    ax1.set_title(site_title, size=20)
+        site_title = set(data["Site"]).pop()
 
-    gs.tight_layout(fig, rect=[0, 0, 1, 0.97])
+        fig = plt.figure(figsize=(10,7))
+        # setup plotting grid
+        gs = gridspec.GridSpec(2, 1, height_ratios=[2,1])
+        ax1 = fig.add_subplot(gs[0])
+        ax2 = fig.add_subplot(gs[1], sharex=ax1)
+        # remove xlabels on the second and third plots
+        plt.setp(ax1.get_xticklabels(), visible=False)
+        # plot data
+        ax1.plot( y_grass, color='black', lw=2, label="MODIS" )
+        [ ax1.plot( y_mod[i], lw=2, color=self.col[i], label=self.lab[i] ) for i, ks in enumerate(y_mod) ]
+        #ax1.plot( y_mod, color='red', lw=2, label="Pendulum" )
+        ax2.plot( x_mes, color='blue', lw=1.5 )
+        # labels
+        ax1.set_ylabel( r"NDVI", fontsize=14 )
+        ax2.set_ylabel( r"$\theta_{s10cm}$", fontsize=18 )
+        # legends
+        ax1.legend(loc=1)
+        ax1.set_title(site_title, size=20)
 
-    pobj.savefig()
-    plt.close()
+        gs.tight_layout(fig, rect=[0, 0, 1, 0.97])
+
+        pobj.savefig()
+        plt.close()
 

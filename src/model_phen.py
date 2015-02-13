@@ -6,7 +6,7 @@ import pandas as pd
 import spring_dynamics as _sd
 import data_handling as _dh
 import model_optim_extras as _mo
-#import model_plotting as _mp
+import model_plotting as _mp
 
 __author__ = 'Rhys Whitley, Douglas Kelley, Martin De Kauwe'
 __email__ = 'rhys.whitley@mq.edu.au'
@@ -19,6 +19,7 @@ __status__ = 'prototype'
 def main():
     dh = _dh.data_handling()
     mo = _mo.model_optim_extras()
+    mp = _mp.model_plotting(fig_path)
 
     # import data as a list of Pandas dataframes
     raw_data = dh.import_data(dat_path)
@@ -26,18 +27,20 @@ def main():
     # map data transformations to each dataset imported
     cor_data = [ dh.grass_correct_data(rd) for rd in raw_data ]
 
-    par_table = [ mo.optimize_func( \
-                    spring_motion, _data, p0=[-10,-3,1,1], \
+    par_table = mo.optimize_all_sampling(
+                    spring_motion, cor_data, p0=[-10,-3,1,2], \
                     ylabel="NDVI_grass", xlabel="SWC10" )
-                 for _data in cor_data ]
 
-#    par_table = mo.optimize_all_sampling(
-#                    spring_motion, cor_data, p0=[-10,-3,1,1], \
-#                    ylabel="NDVI_grass", xlabel="SWC10" )
+    par_table.to_csv(out_path+"spring_parameters.csv", index_label="k",
+                        columns=["Site","Sampling","Value","Error","EigVal"])
 
-    print pd.concat(par_table)
+    par_casted = recast_par_table(par_table)
+
+    mp.plot_allSite_pendulum( cor_data, par_casted, mo.sig_mod1 )
+
 
 def spring_motion(par, data):
+    """ Function to return the prediction from the pendulum """
     mo = _mo.model_optim_extras()
     spring = _sd.spring(par, data, mo.sig_mod1)
     motion = spring.calc_dynamics()['x']

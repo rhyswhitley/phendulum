@@ -84,8 +84,8 @@ class data_handling(object):
         Extract the site names from an array of file names assuming they follow the
         Dingo file name format, i.e. Advanced_processed_SITENAME_vXX.csv
         """
-        file_name = [ re.compile('^\w+').findall(f) for f in ec_files ]
-        split_name = [ re.split('_',f) for f in sum(file_name,[]) ]
+        file_name = ( re.compile('^\w+').findall(f) for f in ec_files )
+        split_name = ( re.split('_',f) for f in sum(file_name,[]) )
         name_ver = [ sublist[-2] for sublist in split_name ]
         return name_ver
 
