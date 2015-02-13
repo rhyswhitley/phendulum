@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from os import listdir
-import re
+import re, sys
 
 def main(fpath):
 
@@ -111,10 +111,17 @@ if __name__ == '__main__':
     version = "_v12"
 
     # collect all files for processed eddy covariance datasets in the data folder
-    get_files = [ f for f in listdir(search_path) ]
+    natt_names = ["AdelaideRiver","AliceSprings","DalyUncleared","DryRiver", \
+                  "HowardSprings","SturtPlains","TiTree"]
+
+    get_files = [ f for f in listdir(search_path) if f.endswith('.csv') ]
+
+    grab_these = pd.Series(get_files).str.contains("|".join(natt_names))
+
+    natt_files = pd.Series(get_files)[np.array(grab_these)]
 
     # for each site extract the required data
-    for i_file in get_files:
+    for i_file in natt_files:
         site = get_site_name(i_file)
         print "Filtering data for site => "+ site
         opath = out_path+out_name+"_"+site+version+".csv"
