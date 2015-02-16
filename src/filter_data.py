@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from os import listdir
-import re
+import re, sys
 
 def main(fpath):
 
@@ -87,7 +87,8 @@ def get_all_site_names(ec_files):
     # list comprehensive way of getting all names in bulk
     file_name = [ re.compile('^\w+').findall(f) for f in ec_files ]
     split_name = [ re.split('_',f) for f in sum(file_name,[]) ]
-    name_ver = [[ name for i,name in enumerate(sublist) if (i==3) ] for sublist in split_name ]
+    name_ver = [[ name for i,name in enumerate(sublist) if (i==3) ] \
+                  for sublist in split_name ]
     return sum(name_ver,[])
 
 def get_site_name(ec_files):
@@ -110,10 +111,17 @@ if __name__ == '__main__':
     version = "_v12"
 
     # collect all files for processed eddy covariance datasets in the data folder
-    get_files = [ f for f in listdir(search_path) ]
+    natt_names = ["AdelaideRiver","AliceSprings","DalyUncleared","DryRiver", \
+                  "HowardSprings","SturtPlains"]
+
+    get_files = [ f for f in listdir(search_path) if f.endswith('.csv') ]
+
+    grab_these = pd.Series(get_files).str.contains("|".join(natt_names))
+
+    natt_files = pd.Series(get_files)[np.array(grab_these)]
 
     # for each site extract the required data
-    for i_file in get_files:
+    for i_file in natt_files:
         site = get_site_name(i_file)
         print "Filtering data for site => "+ site
         opath = out_path+out_name+"_"+site+version+".csv"

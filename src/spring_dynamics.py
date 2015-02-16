@@ -1,6 +1,5 @@
 #!/usr/bin/env python2
 
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import datetime, time
@@ -21,14 +20,19 @@ class spring(object):
     be water, temperature, etc. driving such phenology.
     """
 
-    def __init__(self, Xt, X_func, k_spring, mass=1, dt=0.07):
+    def __init__(self, k_spring, Xt, XE_force, mass=1, dt=0.07, x_init=0, v_init=0):
         # time-varying inputs
-        self.force_Xt = map( X_func, Xt )
+        self.kforce = k_spring[0:3]
+        self.kspring = k_spring[3:5]
+        self.force_Xt = XE_force(self.kforce, Xt)
         self.time = len(Xt)
         # parameters that describe motion
-        self.k_hooke, self.k_drag = k_spring
+        self.k_hooke, \
+        self.k_drag = self.kspring
         self.mass = mass
         self.dt = dt
+        self.x_init = x_init
+        self.v_init = v_init
 
     def hookes_law(self, x):
         # Hooke's Law for a spring
@@ -39,9 +43,9 @@ class spring(object):
 
     def calc_dynamics(self):
         # set zeros (could have empty list) -- ugly either way
-        displ       = [0]*self.time
+        displ       = [self.x_init]*self.time
+        veloc       = [self.v_init]*self.time
         accel       = [0]*self.time
-        veloc       = [0]*self.time
         force_drag  = [0]*self.time
         force_resist= [0]*self.time
         # instantaneous vectors
@@ -105,5 +109,3 @@ class spring(object):
 #txf = efunc([1,-0.5])
 #x = spring( tseries, txf, [1,1]  )
 #x.plot_spring_dynamics()
-#
-#
