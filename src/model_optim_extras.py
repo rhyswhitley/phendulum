@@ -43,6 +43,8 @@ class model_optim_extras(object):
     def min_chi2(self, fun, y, x):
         return lambda par: ((fun(par,x)-y)**2).sum()
 
+    def min_chi2_weighted(self, fun, y, x, w):
+        return lambda par: ((fun(par,x)-y)/(w)**2).sum()
 
 # Standard error calculation
     def get_errors(self, opt_res, Nx):
