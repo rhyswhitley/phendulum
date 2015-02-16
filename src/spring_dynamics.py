@@ -22,8 +22,8 @@ class spring(object):
 
     def __init__(self, k_spring, Xt, XE_force, mass=1, dt=0.07):
         # time-varying inputs
-        self.kforce = k_spring[0:2]
-        self.kspring = k_spring[2:4]
+        self.kforce = k_spring[0:3]
+        self.kspring = k_spring[3:5]
         self.force_Xt = XE_force(self.kforce, Xt)
         self.time = len(Xt)
         # parameters that describe motion
@@ -37,11 +37,6 @@ class spring(object):
     def drag(self, v):
         # drag on pendulum
         return -self.k_drag*v
-
-    def position(self):
-        d2xdt2 = self.force_Xt
-        d1xdt1 = self.k_drag*d2xdt2*self.dt
-        return (d2xdt2 - d1xdt1)/self.k_hooke
 
     def calc_dynamics(self):
         # set zeros (could have empty list) -- ugly either way

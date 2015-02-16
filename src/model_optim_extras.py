@@ -3,7 +3,7 @@
 import pandas as pd
 import numpy as np
 import datetime, time
-from scipy.optimize import minimize
+import scipy.optimize as scopt
 # load own modules
 import data_handling as _dh
 
@@ -31,7 +31,7 @@ class model_optim_extras(object):
         return 1/(1+np.exp(k3*x - k4))
     def sig_mod2(self, par, x):
         k3, k4, k5 = par
-        return k5/(1+np.exp(k3*x - k4))
+        return k5/(1+np.exp(-k3*(x-k4)))
 
     def sigma(self, par, y):
         return par[-1]*y
@@ -50,7 +50,7 @@ class model_optim_extras(object):
 
 # Standard error calculation
     def get_errors(self, opt_res, Nx):
-        hessian = opt_res['hess_inv']
+        hessian = np.linalg.inv(opt_res['hess_inv'])
         fmin0 = opt_res['fun']
         par = opt_res['x']
         Mp = len(par)
@@ -72,14 +72,18 @@ class model_optim_extras(object):
         dh = _dh.data_handling()
         yobs = dataset[ylabel]
         xobs = dataset[xlabel]
-        opt_res = minimize( self.min_chi2(f_mod, yobs, xobs), p0, options={'maxiter':1000} )
-        opt_err = self.get_errors(opt_res, len(yobs))
-        opt_eig = self.get_eigenvalues(opt_res)
+        #opt_res = scopt.minimize( self.min_chi2(f_mod, yobs, xobs), p0 )
+        globmin = self.min_chi2(f_mod, yobs, xobs)
+        opt_res = scopt.differential_evolution( globmin, [(0,100),(0,100),(0,1)], strategy='best2exp', popsize=50 )
+#        opt_err = self.get_errors(opt_res, len(yobs))
+#        opt_eig = self.get_eigenvalues(opt_res)
+#        opt_det = np.linalg.det(opt_res['hess_inv'])
         if site is None:
             site_lab = dh.create_label(dataset["Site"])
         else:
             site_lab = site
-        k_table = pd.DataFrame({'Site':site_lab, 'Value':opt_res['x'], 'Error':opt_err, 'EigVal':opt_eig})
+        #k_table = pd.DataFrame({'Site':site_lab, 'Value':opt_res['x'], 'Error':opt_err, 'EigVal':opt_eig, 'Det':opt_det})
+        k_table = pd.DataFrame({'Site':site_lab, 'Value':opt_res.x})
         k_table.index.name = 'k'
         return k_table
 

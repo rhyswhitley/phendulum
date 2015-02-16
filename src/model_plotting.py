@@ -51,7 +51,7 @@ class model_plotting(object):
 
     def _plot_models(self, xs, fxs, color, label ):
         """ Wrapper on a normal plot for preset model illustration """
-        plt.plot( xs, fxs, linestyle='-', lw=2, color=color, label=label )
+        plt.plot( xs, fxs, linestyle='-', lw=5, color=color, label=label, alpha=0.5 )
 
     def _plot_forcing(self, data, k_var, f_mod, pobj):
         """
@@ -65,7 +65,7 @@ class model_plotting(object):
         plt.plot( data[self.xlabel], data[self.ylabel], 'o', color='black', ms=8 )
         [ self._plot_models( xs, f_mod(ks, xs), color=self.col[i], label=self.lab[i] ) for i, ks in enumerate(np.array(k_var)) ]
         plt.xlabel(r'$\theta_{s 10cm}$', fontsize=18)
-        plt.ylabel('NDVI')
+        plt.ylabel('NDVI_{grass}')
         plt.axis([0,0.32,-0.05,0.6])
         plt.legend(loc=2)
         plt.title(site_title)

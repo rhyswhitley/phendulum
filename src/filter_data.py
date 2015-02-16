@@ -112,7 +112,7 @@ if __name__ == '__main__':
 
     # collect all files for processed eddy covariance datasets in the data folder
     natt_names = ["AdelaideRiver","AliceSprings","DalyUncleared","DryRiver", \
-                  "HowardSprings","SturtPlains","TiTree"]
+                  "HowardSprings","SturtPlains"]
 
     get_files = [ f for f in listdir(search_path) if f.endswith('.csv') ]
 

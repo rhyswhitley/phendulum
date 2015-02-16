@@ -29,6 +29,7 @@ def main():
     # turns the flat parameter table into N-D list of site parameter values at
     # different samplings
     par_cast = recast_par_table(raw_table)
+    print raw_table
 
     # make sure that the number of grouped parameters in the dataset equals the
     # number of imported datasets
@@ -56,7 +57,7 @@ def opt_environmental_forcing(f_mod, raw_data, find_params=False):
 
     if find_params:
         # now do an optimization on all the imported datasets
-        par_table = mo.optimize_all_sampling(f_mod, ind_data, p0=[-10,-3],
+        par_table = mo.optimize_all_sampling(f_mod, ind_data, p0=[-10,-3,0.3],
                                              ylabel="NDVI_grass",
                                              xlabel="SWC_smooth")
 
@@ -103,7 +104,7 @@ if __name__ == '__main__':
     show_plot = False
     # set the type of external forcing model here
     mo = _mo.model_optim_extras()
-    e_force = mo.sig_mod1
+    e_force = mo.sig_mod2
 
     # Tolerance control on what points to extract around the extrema
     mytol = 1e-1
