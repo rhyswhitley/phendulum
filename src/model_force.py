@@ -18,6 +18,7 @@ __status__ = 'prototype'
 
 def main():
 
+
     # import data as a list of Pandas dataframes
     raw_data = _dh.data_handling().import_data(dat_path)
 
@@ -28,8 +29,7 @@ def main():
 
     # turns the flat parameter table into N-D list of site parameter values at
     # different samplings
-    par_cast = recast_par_table(raw_table)
-    print raw_table
+    par_cast = mo.recast_par_table(raw_table)
 
     # make sure that the number of grouped parameters in the dataset equals the
     # number of imported datasets
@@ -37,8 +37,8 @@ def main():
     assert len(data_list)==len(par_cast), msg
 
     mplots = _mp.model_plotting(fig_path)
-    mplots.plot_allSite_forcing(e_force, extd_list, par_cast)
     mplots.plot_data_manipulation(data_list)
+    mplots.plot_allSite_forcing(e_force, extd_list, par_cast)
 
 def opt_environmental_forcing(f_mod, raw_data, find_params=False):
     """
@@ -57,7 +57,10 @@ def opt_environmental_forcing(f_mod, raw_data, find_params=False):
 
     if find_params:
         # now do an optimization on all the imported datasets
-        par_table = mo.optimize_all_sampling(f_mod, ind_data, p0=[-10,-3,0.3],
+        bounds = [(0,1000),(0,1),(0,1)]
+        p0 = [10,0.1,0.3]
+        par_table = mo.optimize_all_sampling(mo.optimize_func,
+                                             f_mod, ind_data, p0, bounds,
                                              ylabel="NDVI_grass",
                                              xlabel="SWC_smooth")
 
@@ -75,26 +78,6 @@ def opt_environmental_forcing(f_mod, raw_data, find_params=False):
             # call recursively; find_params=True is the edge condition
             return opt_environmental_forcing(raw_data, f_mod, find_params=True)
 
-def recast_par_table(tab_im):
-    """
-    Function accepts a parameter table as derived by the environmental
-    forcing procedure and re-casts as a list of parameter values for each
-    sampling type
-    """
-    # get the prefixes for each site name (stored in the ensemble site name)
-    ens_lab = tab_im.query('Sampling=="ensemble"').Site[0]
-    prefix = ens_lab.split("_")
-    # add new column to pivot on
-    tab_im["Label"] = tab_im["Site"]+"_"+tab_im["Sampling"]
-    # now need to group the parameter table into site subsets
-    tab_sub = map( lambda x: tab_im[tab_im["Site"].str.contains(x)], prefix )
-    # recast the above list of subsets into a list of callable parameters
-    tb_pivot = map( lambda x: x.reset_index().pivot(index="Label", columns="k",
-                    values="Value"), tab_sub )
-    # return to user
-    return tb_pivot
-
-
 if __name__ == '__main__':
 
     dat_path = "../data/"
@@ -107,7 +90,7 @@ if __name__ == '__main__':
     e_force = mo.sig_mod2
 
     # Tolerance control on what points to extract around the extrema
-    mytol = 1e-1
+    mytol = 5e-2
     main()
 else:
     print "Program FAIL: check config file"

@@ -38,7 +38,7 @@ class model_plotting(object):
         environmental forcing at each site, as well as the forcing based on
         out-of-site sampling and as an ensemble of all sites.
         """
-        with PdfPages(self.fpath+'phenology_forcing.pdf') as pdf:
+        with PdfPages(self.fpath+'environ_forcing.pdf') as pdf:
             # plot all site points as a reference to the ensemble and out-of-sampling fits
             # plot the optimised site-specific forcing
             for data_i, par_i in zip(data_list, par_list):
@@ -65,7 +65,7 @@ class model_plotting(object):
         plt.plot( data[self.xlabel], data[self.ylabel], 'o', color='black', ms=8 )
         [ self._plot_models( xs, f_mod(ks, xs), color=self.col[i], label=self.lab[i] ) for i, ks in enumerate(np.array(k_var)) ]
         plt.xlabel(r'$\theta_{s 10cm}$', fontsize=18)
-        plt.ylabel('NDVI_{grass}')
+        plt.ylabel(r'NDVI$_{grass}$')
         plt.axis([0,0.32,-0.05,0.6])
         plt.legend(loc=2)
         plt.title(site_title)
@@ -108,7 +108,7 @@ class model_plotting(object):
         pobj.savefig()
         plt.close()
 
-    def plot_inflexion_points(self, data, pobj):
+    def _plot_inflexion_points(self, data, pobj):
         yraw = data["NDVI250X"]
         ymes = data["NDVI_grass"]
         yd1 = data["dy1/dt1"]
@@ -169,9 +169,9 @@ class model_plotting(object):
         plt.setp(ax1.get_xticklabels(), visible=False)
         # plot data
         ax1.plot( y_grass, color='black', lw=2, label="MODIS" )
-        [ ax1.plot( y_mod[i], lw=2, color=self.col[i], label=self.lab[i] ) for i, ks in enumerate(y_mod) ]
+        [ ax1.plot( y_mod[i], lw=2, alpha=0.8, color=self.col[i], label=self.lab[i] ) for i, ks in enumerate(y_mod) ]
         #ax1.plot( y_mod, color='red', lw=2, label="Pendulum" )
-        ax2.plot( x_mes, color='blue', lw=1.5 )
+        ax2.plot( x_mes, color=self.col[1], alpha=0.8, lw=1.5 )
         # labels
         ax1.set_ylabel( r"NDVI", fontsize=14 )
         ax2.set_ylabel( r"$\theta_{s10cm}$", fontsize=18 )

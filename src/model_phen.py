@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import datetime, time
-import pandas as pd
 # load own modules
 import spring_dynamics as _sd
 import data_handling as _dh
@@ -26,18 +25,18 @@ def main():
 
     # map data transformations to each dataset imported
     cor_data = [ dh.grass_correct_data(rd) for rd in raw_data ]
-
-    par_table = mo.optimize_all_sampling(
-                    spring_motion, cor_data, p0=[-10,-3,0.3,1,2], \
+    p0=[10,0.1,0.3,1,2]
+    bounds = [(0,1000),(0,1),(0,1),(-10,10),(-10,10)]
+    par_table = mo.optimize_all_sampling( mo.minimize_func, \
+                    spring_motion, cor_data, p0, bounds, \
                     ylabel="NDVI_grass", xlabel="SWC10" )
 
     par_table.to_csv(out_path+"spring_parameters.csv", index_label="k",
                         columns=["Site","Sampling","Value","Error","EigVal"])
 
-    par_casted = recast_par_table(par_table)
+    par_casted = mo.recast_par_table(par_table)
 
     mp.plot_allSite_pendulum( cor_data, par_casted, mo.sig_mod2 )
-
 
 def spring_motion(par, data):
     """ Function to return the prediction from the pendulum """
@@ -45,26 +44,6 @@ def spring_motion(par, data):
     spring = _sd.spring(par, data, mo.sig_mod2)
     motion = spring.calc_dynamics()['x']
     return motion
-
-def recast_par_table(tab_im):
-    """
-    Function accepts a parameter table as derived by the environmental
-    forcing procedure and re-casts as a list of parameter values for each
-    sampling type
-    """
-    # get the prefixes for each site name (stored in the ensemble site name)
-    ens_lab = tab_im.query('Sampling=="ensemble"').Site[0]
-    prefix = ens_lab.split("_")
-    # add new column to pivot on
-    tab_im["Label"] = tab_im["Site"]+"_"+tab_im["Sampling"]
-    # now need to group the parameter table into site subsets
-    tab_sub = map( lambda x: tab_im[tab_im["Site"].str.contains(x)], prefix )
-    # recast the above list of subsets into a list of callable parameters
-    tb_pivot = map( lambda x: x.reset_index().pivot(index="Label", columns="k",
-                    values="Value"), tab_sub )
-    # return to user
-    return tb_pivot
-
 
 if __name__ == '__main__':
 
