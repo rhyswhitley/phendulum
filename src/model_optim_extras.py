@@ -21,17 +21,17 @@ class model_optim_extras(object):
         k0 = par
         return k0*x
     def exp_mod1(self, par, x):
-        k1, k2 = par
-        return k1*np.exp(-k2*x)
+        k0, k1 = par
+        return k0*np.exp(-k1*x)
     def exp_mod2(self, par, x):
-        k1, k2 = par
-        return k1*(1-k2)**x
+        k0, k1 = par
+        return k0*(1-k1)**x
     def sig_mod1(self, par, x):
-        k3, k4 = par
-        return 1/(1+np.exp(k3*x - k4))
+        k0, k1 = par
+        return 1/(1+np.exp(k0*x - k1))
     def sig_mod2(self, par, x):
-        k3, k4, k5 = par
-        return k5/(1+np.exp(-k3*(x-k4)))
+        k0, k1, k2 = par
+        return k0/(1+np.exp(-k1*(x-k2)))
 
     def sigma(self, par, y):
         return par[-1]*y

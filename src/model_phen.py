@@ -25,8 +25,8 @@ def main():
 
     # map data transformations to each dataset imported
     cor_data = [ dh.grass_correct_data(rd) for rd in raw_data ]
-    p0=[20, 0.1, 0.3, 1, 2]
-    bounds = [(0,1000),(0,1),(0,1),(-10,10),(-10,10)]
+    p0=[0.3, 20, 0.1, 1, 2]
+    bounds = [(0,10),(0,1000),(0,1),(-10,10),(-10,10)]
     par_table = mo.optimize_all_sampling( mo.minimize_func, \
                     spring_motion, cor_data, p0, bounds, \
                     ylabel="NDVI_grass", xlabel="SWC10" )
