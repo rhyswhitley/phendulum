@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
 import pymc
-import numpy as np
-import pandas as pd
 import datetime, time
 # own modules
 import data_handling as _dh
@@ -40,9 +38,15 @@ def mcmc_optim(ys, xs):
 #    k_lab = ["slope","shift","drag","resist"]
 #    beta = [k_max] + [pymc.Uniform('k_{0}'.format(i), -100, 100) for i in k_lab]
 
-    k_2 = pymc.Uniform('k_0', 0, 10, value=0.3)
-    k_0 = pymc.Uniform('k_1', -1e3, 1e4, value=10)
-    k_1 = pymc.Uniform('k_2', -1e2, 1e2, value=0.1)
+#    k_0 = pymc.Uniform('k_0', 0, 1, value=0.3)
+#    k_1 = pymc.Uniform('k_1', -1e3, 1e4, value=10)
+#    k_2 = pymc.Uniform('k_2', -1e2, 1e2, value=1)
+#    k_3 = pymc.Uniform('k_3', -1e2, 1e2, value=1)
+#    k_4 = pymc.Uniform('k_4', -1e2, 1e2, value=2)
+
+    k_0 = pymc.Exponential('k_0', 0.1, value=0.3)
+    k_1 = pymc.Uniform('k_1', -1e3, 1e4, value=10)
+    k_2 = pymc.Uniform('k_2', -1e2, 1e2, value=0.01)
     k_3 = pymc.Uniform('k_3', -1e2, 1e2, value=1)
     k_4 = pymc.Uniform('k_4', -1e2, 1e2, value=2)
 
@@ -56,8 +60,8 @@ def mcmc_optim(ys, xs):
 
     #bayesModel = pymc.Model([likelihood]+[beta])
     bayesModel = pymc.Model([likelihood, k_0, k_1, k_2, k_3, k_4])
-    springPost = pymc.MCMC(bayesModel)
-    springPost.sample(5e3,1e3,2)
+    springPost = pymc.MCMC(bayesModel, db='pickle', dbname='../outputs/spring_trace')
+    springPost.sample(5e4,2e4,2)
     pymc.Matplot.plot(springPost)
     return None
 

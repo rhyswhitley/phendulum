@@ -28,7 +28,7 @@ class model_plotting(object):
         self.ylabel = "NDVI_grass"
         self.fpath = fig_path
         self.outcol = "#000000"
-        self.col = ['#DC143C','#4169E1','#3CB371']
+        self.col = ['#3CB371','#DC143C','#4169E1']
         self.lab = ['ensemble','in','out']
 
 
@@ -152,7 +152,7 @@ class model_plotting(object):
         x_mes = data["SWC10"]
 
         # based on the number of samplings get the prediction of motion
-        springs = [ _sd.spring(k, x_mes, f_mod) for k in np.array(kvar) ]
+        springs = [ _sd.spring(k, x_mes, f_mod, x_init=0.2, v_init=0.02) for k in np.array(kvar) ]
         y_mod = [ p.calc_dynamics()['x'] for p in springs ]
         force_mod = [ f.calc_dynamics()['Fe'] for f in springs ]
         accel_mod = [ a.calc_dynamics()['a'] for a in springs ]
@@ -171,7 +171,7 @@ class model_plotting(object):
         ax1.plot( y_grass, color='black', lw=2, label="MODIS" )
         [ ax1.plot( y_mod[i], lw=2, alpha=0.8, color=self.col[i], label=self.lab[i] ) for i, ks in enumerate(y_mod) ]
         #ax1.plot( y_mod, color='red', lw=2, label="Pendulum" )
-        ax2.plot( x_mes, color=self.col[1], alpha=0.8, lw=1.5 )
+        ax2.plot( x_mes, color=self.col[0], alpha=0.8, lw=1.5 )
         # labels
         ax1.set_ylabel( r"NDVI", fontsize=14 )
         ax2.set_ylabel( r"$\theta_{s10cm}$", fontsize=18 )

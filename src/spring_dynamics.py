@@ -20,7 +20,7 @@ class spring(object):
     be water, temperature, etc. driving such phenology.
     """
 
-    def __init__(self, k_spring, Xt, XE_force, mass=1, dt=0.07, x_init=0, v_init=0):
+    def __init__(self, k_spring, Xt, XE_force, x_init=0, v_init=0, mass=1, dt=0.07):
         # time-varying inputs
         self.kforce = k_spring[0:3]
         self.kspring = k_spring[3:5]
@@ -43,11 +43,13 @@ class spring(object):
 
     def calc_dynamics(self):
         # set zeros (could have empty list) -- ugly either way
-        displ       = [self.x_init]*self.time
-        veloc       = [self.v_init]*self.time
+        displ       = [0]*self.time
+        veloc       = [0]*self.time
         accel       = [0]*self.time
         force_drag  = [0]*self.time
         force_resist= [0]*self.time
+        displ[0] = self.x_init
+        veloc[0] = self.v_init
         # instantaneous vectors
         for t in range(self.time-1):
             # forces on the pendulum
