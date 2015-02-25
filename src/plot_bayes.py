@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 import datetime, time
 import pickle
@@ -25,8 +25,10 @@ def main():
     _plotSpring(springObj)
 
 def import_pickle(fpath):
-    fileObject = open(fpath, 'r')
-    return pickle.load(fileObject)
+    fileObject = open(fpath, 'rb')
+    data = pickle.load(fileObject)
+    fileObject.close()
+    return data
 
 def _plotPosteriors(pymc_obj):
 

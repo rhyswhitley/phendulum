@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 import datetime, time
 import pandas as pd
@@ -57,8 +57,8 @@ def opt_environmental_forcing(f_mod, raw_data, find_params=False):
 
     if find_params:
         # now do an optimization on all the imported datasets
-        bounds = [(0,1),(0,1000),(0,1)]
-        p0 = [0.3,10,0.1]
+        bounds = [(0,1),(-1000,0),(0,100)]
+        p0 = [0.3, -10, 1]
         par_table = mo.optimize_all_sampling(mo.optimize_func,
                                              f_mod, ind_data, p0, bounds,
                                              ylabel="NDVI_grass",

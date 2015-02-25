@@ -74,7 +74,7 @@ class data_handling(object):
         lower = min(dataset["dy2/dt2"].ix[2:])*tol
         dataset_ex = dataset.loc[(dataset['dy1/dt1']<upper) & (dataset['dy1/dt1']>lower)]
         if len(dataset_ex.index) <= 1:
-            print "ERROR: Tolerance is too high :: not enough data to optimize on"
+            print("ERROR: Tolerance is too high :: not enough data to optimize on")
             return None
         else:
             return dataset_ex #.ix[:,'SWC_smooth':'NDVI250X']

@@ -26,7 +26,7 @@ def main():
     # map data transformations to each dataset imported
     cor_data = [ dh.grass_correct_data(rd) for rd in raw_data ]
 
-    p0=[0.3, 10, 0.1, 1, 2]
+    p0=[0.3, -10, 1, 1, 2]
     bounds = [(0,10),(0,1000),(0,1),(-10,10),(-10,10)]
 
     par_table = mo.optimize_all_sampling( mo.minimize_func, \
@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
     main()
 else:
-    print "Program FAIL: check config file"
+    print("Program FAIL: check config file")
 
 
 

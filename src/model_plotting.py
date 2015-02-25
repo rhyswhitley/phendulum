@@ -170,8 +170,7 @@ class model_plotting(object):
         # plot data
         ax1.plot( y_grass, color='black', lw=2, label="MODIS" )
         [ ax1.plot( y_mod[i], lw=2, alpha=0.8, color=self.col[i], label=self.lab[i] ) for i, ks in enumerate(y_mod) ]
-        #ax1.plot( y_mod, color='red', lw=2, label="Pendulum" )
-        ax2.plot( x_mes, color=self.col[0], alpha=0.8, lw=1.5 )
+        ax2.plot( x_mes, color=self.col[2], alpha=0.8, lw=1.5 )
         # labels
         ax1.set_ylabel( r"NDVI", fontsize=14 )
         ax2.set_ylabel( r"$\theta_{s10cm}$", fontsize=18 )
