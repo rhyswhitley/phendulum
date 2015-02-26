@@ -26,12 +26,15 @@ def main():
     # map data transformations to each dataset imported
     cor_data = [ dh.grass_correct_data(rd) for rd in raw_data ]
 
-    p0=[0.3, -10, 1, 1, 2]
-    bounds = [(0,10),(0,1000),(0,1),(-10,10),(-10,10)]
+    #p0 = [0.3, -10, 1, 1, 2]
+    #bounds = [(0,10),(0,1000),(0,1),(-10,10),(-10,10)]
+
+    p0 = [10, 0.1, 2, 10]
+    bounds = [(0,1000),(0,1),(-10,10),(-10,10)]
 
     par_table = mo.optimize_all_sampling( mo.minimize_func, \
                     spring_motion, cor_data, p0, bounds, \
-                    ylabel="NDVI_grass", xlabel="SWC10" )
+                    ylabel="NDVI_norm", xlabel="SWC10" )
 
 
     par_table.to_csv(out_path+"spring_parameters.csv", index_label="k",
@@ -39,13 +42,13 @@ def main():
 
     par_casted = mo.recast_par_table(par_table)
 
-    mp.plot_allSite_pendulum( cor_data, par_casted, mo.sig_mod2 )
+    mp.plot_allSite_pendulum( cor_data, par_casted, mo.sig_mod1 )
 
 
 def spring_motion(par, data):
     """ Function to return the prediction from the pendulum """
     mo = _mo.model_optim_extras()
-    spring = _sd.spring(par, data, mo.sig_mod2, x_init=0.1, v_init=0.002 )
+    spring = _sd.spring(par, data, mo.sig_mod1, x_init=0.1, v_init=0.002 )
     motion = spring.calc_dynamics()['x']
     return motion
 

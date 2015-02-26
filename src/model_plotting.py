@@ -25,7 +25,7 @@ class model_plotting(object):
         over all plotting
         """
         self.xlabel = "SWC_smooth"
-        self.ylabel = "NDVI_grass"
+        self.ylabel = "NDVI_norm"
         self.fpath = fig_path
         self.outcol = "#000000"
         self.col = ['#3CB371','#DC143C','#4169E1']
@@ -148,7 +148,7 @@ class model_plotting(object):
     def _plot_pendulum(self, data, kvar, f_mod, pobj):
 
         # now assign the optimised coefficients to the pendulum and calculate the motion
-        y_grass = data["NDVI_grass"]
+        y_grass = data["NDVI_norm"]
         x_mes = data["SWC10"]
 
         # based on the number of samplings get the prediction of motion
@@ -160,20 +160,23 @@ class model_plotting(object):
 
         site_title = set(data["Site"]).pop()
 
-        fig = plt.figure(figsize=(10,7))
+        fig = plt.figure(figsize=(10,8))
         # setup plotting grid
-        gs = gridspec.GridSpec(2, 1, height_ratios=[2,1])
+        gs = gridspec.GridSpec(3, 1, height_ratios=[2,1,1])
         ax1 = fig.add_subplot(gs[0])
         ax2 = fig.add_subplot(gs[1], sharex=ax1)
+        ax3 = fig.add_subplot(gs[2], sharex=ax1)
         # remove xlabels on the second and third plots
         plt.setp(ax1.get_xticklabels(), visible=False)
         # plot data
         ax1.plot( y_grass, color='black', lw=2, label="MODIS" )
         [ ax1.plot( y_mod[i], lw=2, alpha=0.8, color=self.col[i], label=self.lab[i] ) for i, ks in enumerate(y_mod) ]
-        ax2.plot( x_mes, color=self.col[2], alpha=0.8, lw=1.5 )
+        ax2.plot( veloc_mod, color=self.col[2], alpha=0.8, lw=1.5 )
+        ax3.plot( accel_mod, color=self.col[1], alpha=0.8, lw=1.5 )
         # labels
         ax1.set_ylabel( r"NDVI", fontsize=14 )
-        ax2.set_ylabel( r"$\theta_{s10cm}$", fontsize=18 )
+        ax2.set_ylabel( r"$\delta$NDVI/$\delta$t", fontsize=18 )
+        ax2.set_ylabel( r"$\delta^{2}$NDVI/$\delta$t$^{2}$", fontsize=18 )
         # legends
         ax1.legend(loc=1)
         ax1.set_title(site_title, size=20)

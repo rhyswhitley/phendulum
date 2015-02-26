@@ -22,8 +22,9 @@ class spring(object):
 
     def __init__(self, k_spring, Xt, XE_force, x_init=0, v_init=0, mass=1, dt=0.07):
         # time-varying inputs
-        self.kforce = k_spring[0:3]
-        self.kspring = k_spring[3:5]
+        klen = len(k_spring)
+        self.kforce = k_spring[0:klen-2]
+        self.kspring = k_spring[klen-2:klen]
         self.force_Xt = XE_force(self.kforce, Xt)
         self.time = len(Xt)
         # parameters that describe motion

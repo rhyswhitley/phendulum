@@ -28,7 +28,7 @@ def main():
     mcmc_wrap(cor_data[5])
 
 def mcmc_wrap(data):
-    ys = data["NDVI_grass"]
+    ys = data["NDVI_norm"]
     xs = data["SWC10"]
     mcmc_optim(ys, xs)
 
@@ -36,21 +36,20 @@ def mcmc_wrap(data):
 def mcmc_optim(ys, xs):
 
     #k_0 = pymc.Exponential('k_0', 0.01, value=0.3)
-    k_0 = pymc.Uniform('k_0', 0, 10, value=0.1)
     k_1 = pymc.Uniform('k_1', 1, 1e3, value=10)
     k_2 = pymc.Uniform('k_2', 0, 1e2, value=0)
     k_3 = pymc.Uniform('k_3', -1e2, 1e2, value=1)
     k_4 = pymc.Uniform('k_4', -1e2, 1e2, value=2)
 
     @pymc.deterministic
-    def springModel(ks_0=k_0, ks_1=k_1, ks_2=k_2, ks_3=k_3, ks_4=k_4, xs=xs):
-        ks = [ks_0, ks_1, ks_2, ks_3, ks_4]
-        mySpring = _sd.spring(ks, xs, mo.sig_mod2, x_init=0.14, v_init=0.01)
+    def springModel(ks_1=k_1, ks_2=k_2, ks_3=k_3, ks_4=k_4, xs=xs):
+        ks = [ks_1, ks_2, ks_3, ks_4]
+        mySpring = _sd.spring(ks, xs, mo.sig_mod1, x_init=0.14, v_init=0.01)
         return mySpring.calc_dynamics()['x']
 
-    likelihood = pymc.Normal('likelihood', mu=springModel, tau=0.5, value=ys, observed=True)
+    likelihood = pymc.Normal('likelihood', mu=springModel, tau=1, value=ys, observed=True)
 
-    bayesModel = pymc.Model([likelihood, k_0, k_1, k_2, k_3, k_4])
+    bayesModel = pymc.Model([likelihood, k_1, k_2, k_3, k_4])
     springPost = pymc.MCMC(bayesModel, db='pickle', dbname='../outputs/spring_trace')
     springPost.sample(2e4,1e4,2)
     pymc.Matplot.plot(springPost)

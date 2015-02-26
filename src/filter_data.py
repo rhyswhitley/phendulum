@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from os import listdir
-import re, sys
+import sys, re
 
 def main(fpath):
 
@@ -16,17 +16,31 @@ def main(fpath):
 
     # Let just grab what we need -- SWC and NDVI
     ec_phen = ec_data.loc[:,("Sws_Con","250m_16_days_NDVI_new_smooth")]
+    ec_temp = ec_data.loc[:,("Ta_Con")]
+    ec_rain = ec_data.loc[:,"Precip_Con"]
 
     # Resample the hourly data to daily (although we could just do 16-day)
-    ec_sampled = ec_phen.resample('D', how='mean',)
-    ec_sampled.columns = ["SWC10","NDVI250X"]
-    ec_filt = ec_sampled[np.isfinite(ec_sampled['NDVI250X'])]
+    phen_sampled = ec_phen.resample('D', how='mean',)
+    phen_sampled.columns = ["SWC10","NDVI250X"]
+    ndvi_pred = np.isfinite(phen_sampled['NDVI250X'])
+    phen_filt = phen_sampled[ndvi_pred]
+
+    temp_sampled = ec_temp.resample('D', how=('mean','min','max'),)
+    temp_sampled.columns = ["Tmean","Tmin","Tmax"]
+    temp_filt = temp_sampled[ndvi_pred]
+
+    rain_sampled = ec_rain.resample('D', how='sum',)
+    rain_sampled.columns = ["Rain"]
+    rain_filt = rain_sampled[ndvi_pred]
+
+    print(rain_filt.head())
+    return None
 
     # Write to CSV into the Data folder
-    ec_filt.to_csv(opath, sep=",")
+    phen_filt.to_csv(opath, sep=",")
 
     # Add date/time index
-    ec_filt.reset_index(level=0, inplace=True)
+    phen_filt.reset_index(level=0, inplace=True)
 
     # Plots environmental data
     if draw_plot==True:
@@ -56,8 +70,8 @@ def main(fpath):
         plt.rcParams['axes.edgecolor'] = almost_black
         plt.rcParams['axes.labelcolor'] = almost_black
 
-        ax1.plot(ec_filt['DT'], ec_filt["NDVI250X"], linestyle='-', color='red')
-        ax2.plot(ec_filt['DT'], ec_filt["SWC10"], linestyle='-', color='blue')
+        ax1.plot(phen_filt['DT'], phen_filt["NDVI250X"], linestyle='-', color='red')
+        ax2.plot(phen_filt['DT'], phen_filt["SWC10"], linestyle='-', color='blue')
         ax1.set_ylabel(r"NDVI (-)")
         ax2.set_ylabel(r"$\theta_{10cm}$")
         ax2.set_xlabel(r"Years")
