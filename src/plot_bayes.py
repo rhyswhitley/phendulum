@@ -33,14 +33,14 @@ def import_pickle(fpath):
 
 def _plotPosteriors(pymc_obj):
 
-    k_samples = [ pymc_obj['k_{0}'.format(i)].values() for i in range(1,5)]
+    k_samples = [ pymc_obj['k_{0}'.format(i)].values() for i in range(1,5) ]
     noSamples = len(k_samples)
 
     fig = plt.figure(figsize=(8,9))
     gs = gridspec.GridSpec(noSamples, 2, width_ratios=[2,1])
     for i, j in zip(range(0,8,2), range(noSamples)):
-        _plotTrace(fig, gs[i], k_samples[j][0])
-        _plotHist(fig, gs[i+1], k_samples[j])
+        _plotTrace(fig, gs[i], k_samples[j][0][::1])
+        _plotHist(fig, gs[i+1], k_samples[j][::1])
     plt.show()
 
 def _plotCorrelations(pymc_obj):
@@ -133,7 +133,7 @@ def _plotSpring(pymc_obj):
     plt.show()
 
 if __name__=="__main__":
-    mcfile = "../outputs/spring_trace"
+    mcfile = "../outputs/spring_trace_SturtPlains"
     mo = _mo.model_optim_extras()
     dh = _dh.data_handling()
     eforce = mo.sig_mod1

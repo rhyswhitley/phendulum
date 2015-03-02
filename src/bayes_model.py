@@ -25,15 +25,17 @@ def main():
     cor_data = [ dh.grass_correct_data(rd) for rd in raw_data ]
 
     # test with Sturt Plains
-    mcmc_wrap(cor_data[5])
+    #mcmc_wrap(cor_data[5])
+    [ mcmc_wrap(d,d["Site"][0]) for d in cor_data ]
 
-def mcmc_wrap(data):
+def mcmc_wrap(data, site):
+    print("MCMC Optim Model on ===> ", site)
     ys = data["NDVI_norm"]
     xs = data["SWC10"]
-    mcmc_optim(ys, xs)
+    mcmc_optim(ys, xs, site)
 
 
-def mcmc_optim(ys, xs):
+def mcmc_optim(ys, xs, site):
 
     #k_0 = pymc.Exponential('k_0', 0.01, value=0.3)
     k_1 = pymc.Uniform('k_1', 1, 1e3, value=10)
@@ -50,9 +52,11 @@ def mcmc_optim(ys, xs):
     likelihood = pymc.Normal('likelihood', mu=springModel, tau=1, value=ys, observed=True)
 
     bayesModel = pymc.Model([likelihood, k_1, k_2, k_3, k_4])
-    springPost = pymc.MCMC(bayesModel, db='pickle', dbname='../outputs/spring_trace')
-    springPost.sample(2e4,1e4,2)
-    pymc.Matplot.plot(springPost)
+    springPost = pymc.MCMC(bayesModel, db='pickle', dbname='../outputs/spring_trace_'+site)
+    springPost.sample(5e4,2e4,2)
+    #springPost.sample(5e1,2e1,1)
+    #pymc.Matplot.plot(springPost)
+
     return None
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -28,12 +28,15 @@ def main(fpath):
     temp_sampled = ec_temp.resample('D', how=('mean','min','max'),)
     temp_sampled.columns = ["Tmean","Tmin","Tmax"]
     temp_filt = temp_sampled[ndvi_pred]
+    print(temp_filt.head())
 
     rain_sampled = ec_rain.resample('D', how='sum',)
     rain_sampled.columns = ["Rain"]
     rain_filt = rain_sampled[ndvi_pred]
 
-    print(rain_filt.head())
+    all_filt = pd.concat([phen_filt, temp_filt], axis=1)
+
+    print( all_filt.head() )
     return None
 
     # Write to CSV into the Data folder
@@ -119,14 +122,15 @@ if __name__ == '__main__':
     out_path = "../data/"
     fig_path = "../figs/"
     search_path = out_path+"Dingo_v12/"
-    show_names = False
+    show_names = True
     draw_plot = True
     out_name = "filtered"
     version = "_v12"
 
     # collect all files for processed eddy covariance datasets in the data folder
-    natt_names = ["AdelaideRiver","AliceSprings","DalyUncleared","DryRiver", \
-                  "HowardSprings","SturtPlains"]
+#    natt_names = ["AdelaideRiver","AliceSprings","DalyUncleared","DryRiver", \
+#                  "HowardSprings","SturtPlains"]
+    natt_names = ["AdelaideRiver"]
 
     get_files = [ f for f in listdir(search_path) if f.endswith('.csv') ]
 
@@ -137,7 +141,7 @@ if __name__ == '__main__':
     # for each site extract the required data
     for i_file in natt_files:
         site = get_site_name(i_file)
-        print "Filtering data for site => "+ site
+        print("Filtering data for site => "+ site)
         opath = out_path+out_name+"_"+site+version+".csv"
         fpath = search_path+i_file
         main(fpath)
