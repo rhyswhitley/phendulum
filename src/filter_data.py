@@ -15,26 +15,37 @@ def main(fpath):
             print( str(i) + " : " + n )
 
     # Let just grab what we need -- SWC and NDVI
-    ec_phen = ec_data.loc[:,("Sws_Con","250m_16_days_NDVI_new_smooth")]
+    ec_phen = ec_data.loc[:,("Sws_Con","250m_16_days_NDVI_new_smooth","VPD_Con")]
     ec_temp = ec_data.loc[:,("Ta_Con")]
     ec_rain = ec_data.loc[:,"Precip_Con"]
+    rad_data = ec_data["Fsd_Con"]
+
 
     # Resample the hourly data to daily (although we could just do 16-day)
     phen_sampled = ec_phen.resample('D', how='mean',)
-    phen_sampled.columns = ["SWC10","NDVI250X"]
+    phen_sampled.columns = ["SWC10","NDVI250X","VPD"]
     ndvi_pred = np.isfinite(phen_sampled['NDVI250X'])
     phen_filt = phen_sampled[ndvi_pred]
 
     temp_sampled = ec_temp.resample('D', how=('mean','min','max'),)
     temp_sampled.columns = ["Tmean","Tmin","Tmax"]
     temp_filt = temp_sampled[ndvi_pred]
-    print(temp_filt.head())
 
     rain_sampled = ec_rain.resample('D', how='sum',)
     rain_sampled.columns = ["Rain"]
     rain_filt = rain_sampled[ndvi_pred]
 
-    all_filt = pd.concat([phen_filt, temp_filt], axis=1)
+    photo_data = rad_data[ rad_data>0 ]
+    photoperiod = photo_data.resample('D', how='count')*1800
+    photo_filt = photoperiod[ndvi_pred]
+
+    print photo_filt.shape
+    print phen_filt.shape
+
+    plt.plot( range(len(photo_filt)), photo_filt )
+    plt.show()
+
+    all_filt = pd.concat([phen_filt, temp_filt, rain_filt], axis=1)
 
     print( all_filt.head() )
     return None
@@ -122,7 +133,7 @@ if __name__ == '__main__':
     out_path = "../data/"
     fig_path = "../figs/"
     search_path = out_path+"Dingo_v12/"
-    show_names = True
+    show_names = False
     draw_plot = True
     out_name = "filtered"
     version = "_v12"
@@ -130,7 +141,7 @@ if __name__ == '__main__':
     # collect all files for processed eddy covariance datasets in the data folder
 #    natt_names = ["AdelaideRiver","AliceSprings","DalyUncleared","DryRiver", \
 #                  "HowardSprings","SturtPlains"]
-    natt_names = ["AdelaideRiver"]
+    natt_names = ["AdelaideRiver_v12_x"]
 
     get_files = [ f for f in listdir(search_path) if f.endswith('.csv') ]
 
