@@ -26,8 +26,8 @@ def main():
     # map data transformations to each dataset imported
     cor_data = [ dh.grass_correct_data(rd) for rd in raw_data ]
 
-    #p0 = [0.3, -10, 1, 1, 2]
-    #bounds = [(0,10),(0,1000),(0,1),(-10,10),(-10,10)]
+    [ dh.get_site_summary(d) for d in cor_data ]
+    return None
 
     p0 = [10, 0.1, 2, 10]
     bounds = [(0,1000),(0,1),(-10,10),(-10,10)]

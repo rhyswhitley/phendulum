@@ -7,7 +7,7 @@ import pandas as pd
 from os import listdir
 import re
 
-def main(fpath, site):
+def main(fpath):
 
     # Display column names and their index for reference
     ec_data = pd.read_csv(fpath, parse_dates=True , index_col=['DT'])
@@ -35,7 +35,7 @@ def main(fpath, site):
     temp_filt = temp_sampled[ndvi_pred]
 
     rain_sampled = ec_rain.resample('D', how='sum',)
-    rain_sampled.columns = ["Rain"]
+    rain_sampled.columns = ["Rainfall"]
     rain_filt = rain_sampled[ndvi_pred]
 
     # put it all together here
@@ -44,10 +44,6 @@ def main(fpath, site):
     all_filt["Photoperiod"] = map( \
         lambda x: photoperiod(site_coord.Latitude,x), \
         phen_filt.index.dayofyear )
-    # add geospatial information here
-    all_filt["Site"] = site
-    all_filt["Latitude"] = site_coord.Latitude
-    all_filt["Longitude"] = site_coord.Longitude
 
     # Write to CSV into the Data folder
     all_filt.to_csv(opath, sep=",")
