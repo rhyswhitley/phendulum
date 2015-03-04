@@ -1,15 +1,20 @@
 #!/usr/bin/env python
 
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from os import listdir
-import sys, re
+import re
 
-def main(fpath):
+def main(fpath, site):
 
     # Display column names and their index for reference
     ec_data = pd.read_csv(fpath, parse_dates=True , index_col=['DT'])
+    # import site coordinate information
+    geocord = pd.read_csv(site_path)
+    site_coord = geocord.loc[geocord["Label"]==site]
+
     if show_names == True:
         for n,i in zip(ec_data.columns.values,range(ec_data.shape[1])):
             print( str(i) + " : " + n )
@@ -18,8 +23,6 @@ def main(fpath):
     ec_phen = ec_data.loc[:,("Sws_Con","250m_16_days_NDVI_new_smooth","VPD_Con")]
     ec_temp = ec_data.loc[:,("Ta_Con")]
     ec_rain = ec_data.loc[:,"Precip_Con"]
-    rad_data = ec_data["Fsd_Con"]
-
 
     # Resample the hourly data to daily (although we could just do 16-day)
     phen_sampled = ec_phen.resample('D', how='mean',)
@@ -35,26 +38,22 @@ def main(fpath):
     rain_sampled.columns = ["Rain"]
     rain_filt = rain_sampled[ndvi_pred]
 
-    photo_data = rad_data[ rad_data>0 ]
-    photoperiod = photo_data.resample('D', how='count')*1800
-    photo_filt = photoperiod[ndvi_pred]
-
-    print photo_filt.shape
-    print phen_filt.shape
-
-    plt.plot( range(len(photo_filt)), photo_filt )
-    plt.show()
-
+    # put it all together here
     all_filt = pd.concat([phen_filt, temp_filt, rain_filt], axis=1)
 
-    print( all_filt.head() )
-    return None
+    all_filt["Photoperiod"] = map( \
+        lambda x: photoperiod(site_coord.Latitude,x), \
+        phen_filt.index.dayofyear )
+    # add geospatial information here
+    all_filt["Site"] = site
+    all_filt["Latitude"] = site_coord.Latitude
+    all_filt["Longitude"] = site_coord.Longitude
 
     # Write to CSV into the Data folder
-    phen_filt.to_csv(opath, sep=",")
+    all_filt.to_csv(opath, sep=",")
 
     # Add date/time index
-    phen_filt.reset_index(level=0, inplace=True)
+    all_filt.reset_index(level=0, inplace=True)
 
     # Plots environmental data
     if draw_plot==True:
@@ -84,8 +83,8 @@ def main(fpath):
         plt.rcParams['axes.edgecolor'] = almost_black
         plt.rcParams['axes.labelcolor'] = almost_black
 
-        ax1.plot(phen_filt['DT'], phen_filt["NDVI250X"], linestyle='-', color='red')
-        ax2.plot(phen_filt['DT'], phen_filt["SWC10"], linestyle='-', color='blue')
+        ax1.plot(all_filt['DT'], all_filt["NDVI250X"], linestyle='-', color='red')
+        ax2.plot(all_filt['DT'], all_filt["SWC10"], linestyle='-', color='blue')
         ax1.set_ylabel(r"NDVI (-)")
         ax2.set_ylabel(r"$\theta_{10cm}$")
         ax2.set_xlabel(r"Years")
@@ -124,7 +123,15 @@ def get_site_name(ec_files):
     split_name = re.split('_',file_name[0])
     return split_name[-2]
 
-    # Get all EC files in the folder above
+def photoperiod(lat, doy):
+    """Ecological Modeling, volume 80 (1995) pp. 87-95"""
+    P = math.asin(.39795*math.cos(.2163108 + \
+                    2*math.atan(.9671396*math.tan(.00860*(doy-186)))))
+    numerator = math.sin(0.8333*math.pi/180.) + \
+                    math.sin(lat*math.pi/180.)*math.sin(P)
+    denominator = math.cos(lat*math.pi/180.)*math.cos(P)
+    photohr = 24. - (24./math.pi)*math.acos(numerator/denominator)
+    return photohr
 
 
 if __name__ == '__main__':
@@ -133,15 +140,15 @@ if __name__ == '__main__':
     out_path = "../data/"
     fig_path = "../figs/"
     search_path = out_path+"Dingo_v12/"
+    site_path = search_path+"site coordinates ozflux.csv"
     show_names = False
     draw_plot = True
     out_name = "filtered"
     version = "_v12"
 
     # collect all files for processed eddy covariance datasets in the data folder
-#    natt_names = ["AdelaideRiver","AliceSprings","DalyUncleared","DryRiver", \
-#                  "HowardSprings","SturtPlains"]
-    natt_names = ["AdelaideRiver_v12_x"]
+    natt_names = ["AdelaideRiver","AliceSprings","DalyUncleared","DryRiver", \
+                  "HowardSprings","SturtPlains"]
 
     get_files = [ f for f in listdir(search_path) if f.endswith('.csv') ]
 
@@ -155,5 +162,5 @@ if __name__ == '__main__':
         print("Filtering data for site => "+ site)
         opath = out_path+out_name+"_"+site+version+".csv"
         fpath = search_path+i_file
-        main(fpath)
+        main(fpath, site)
 
