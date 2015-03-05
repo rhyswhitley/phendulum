@@ -53,9 +53,7 @@ def mcmc_optim(ys, xs, site):
 
     bayesModel = pymc.Model([likelihood, k_1, k_2, k_3, k_4])
     springPost = pymc.MCMC(bayesModel, db='pickle', dbname='../outputs/spring_trace_'+site)
-    springPost.sample(5e4,2e4,2)
-    #springPost.sample(5e1,2e1,1)
-    #pymc.Matplot.plot(springPost)
+    springPost.sample(5e4, 2e4, 1)
 
     return None
 

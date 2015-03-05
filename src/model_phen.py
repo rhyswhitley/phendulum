@@ -26,10 +26,7 @@ def main():
     # map data transformations to each dataset imported
     cor_data = [ dh.grass_correct_data(rd) for rd in raw_data ]
 
-    [ dh.get_site_summary(d) for d in cor_data ]
-    return None
-
-    p0 = [10, 0.1, 2, 10]
+    p0 = [10, 0.1, 1, 2]
     bounds = [(0,1000),(0,1),(-10,10),(-10,10)]
 
     par_table = mo.optimize_all_sampling( mo.minimize_func, \

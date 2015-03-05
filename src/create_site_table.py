@@ -8,7 +8,7 @@ import re
 def main(fpath, site):
 
     # echo to user
-    print("Filtering data for site => "+ site)
+    print("Creating table for site => "+ site)
 
     # Display column names and their index for reference
     ec_data = pd.read_csv(fpath, parse_dates=True , index_col=['DT'])
@@ -17,7 +17,7 @@ def main(fpath, site):
     _map = ec_data.groupby(ec_data.index.year)["Precip_Con"].sum()
     _mat = ec_data.groupby(ec_data.index.year)["Ta_Con"].mean()
 
-    return (site, _map.mean(), _mat.mean(), _map.std(), _mat.std())
+    return (site, _map.mean(), _mat.mean(), _map.std()/_map.mean(), _mat.std()/_mat.mean())
 
 
 def get_all_site_names(ec_files):

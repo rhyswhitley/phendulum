@@ -158,5 +158,5 @@ if __name__ == '__main__':
         print("Filtering data for site => "+ site)
         opath = out_path+out_name+"_"+site+version+".csv"
         fpath = search_path+i_file
-        main(fpath, site)
+        main(fpath)
 
