@@ -24,7 +24,8 @@ class model_plotting(object):
         variables are set and stored here for easy access and control
         over all plotting
         """
-        self.xlabel = "SWC_smooth"
+        #self.xlabel = "SWC_smooth"
+        self.xlabel = "RWC"
         self.ylabel = "NDVI_norm"
         self.fpath = fig_path
         self.outcol = "#000000"
@@ -59,15 +60,17 @@ class model_plotting(object):
         the three types of sampling used in the analysis
         """
         # Create vectors for model fits
-        xs = np.arange(0,0.5,1e-3)
+        #xs = np.arange(0,0.5,1e-3)
+        xs = np.arange(0,1,1e-3)
         site_title = set(data["Site"]).pop()
 
         plt.plot( data[self.xlabel], data[self.ylabel], 'o', color='black', ms=8 )
         [ self._plot_models( xs, f_mod(ks, xs), color=self.col[i], label=self.lab[i] ) for i, ks in enumerate(np.array(k_var)) ]
         plt.xlabel(r'$\theta_{s 10cm}$', fontsize=18)
         plt.ylabel(r'NDVI$_{grass}$')
-        plt.axis([0,0.32,-0.05,0.6])
-        plt.legend(loc=2)
+        #plt.axis([0,0.32,-0.05,0.6])
+        plt.axis([0,1,0,1])
+        plt.legend(loc='lower right')
         plt.title(site_title)
         pobj.savefig()
         plt.close()
@@ -133,7 +136,7 @@ class model_plotting(object):
 # Pendulum
 #================================================================================
 
-    def plot_allSite_pendulum(self, data_list, par_list, f_mod):
+    def plot_allSite_pendulum(self, data_list, par_list, f_mod, xlabel="SWC10"):
         """
         Creates a PDF whose pages contain the results that describes the
         environmental forcing at each site, as well as the forcing based on
@@ -143,13 +146,13 @@ class model_plotting(object):
             # plot all site points as a reference to the ensemble and out-of-sampling fits
             # plot the optimised site-specific forcing
             for data, par in zip(data_list, par_list):
-                self._plot_pendulum( data, par, f_mod, pdf )
+                self._plot_pendulum( data, par, f_mod, pdf, xlabel )
 
-    def _plot_pendulum(self, data, kvar, f_mod, pobj):
+    def _plot_pendulum(self, data, kvar, f_mod, pobj, xlabel):
 
         # now assign the optimised coefficients to the pendulum and calculate the motion
         y_grass = data["NDVI_norm"]
-        x_mes = data["SWC10"]
+        x_mes = data[xlabel]
 
         # based on the number of samplings get the prediction of motion
         springs = [ _sd.spring(k, x_mes, f_mod, x_init=0.2, v_init=0.02) for k in np.array(kvar) ]

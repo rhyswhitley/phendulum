@@ -44,13 +44,14 @@ def main():
                         ncol=len(m_labels), bbox_to_anchor=(0.5, 1.1))
         ax3.scatter(sub_tab["Latitude"], sub_tab["Value"], marker='D', s=50, c=r_colors, alpha=0.5)
         ax1.set_ylabel('k$_{'+plab[a]+'}$', fontsize=16)
-        ax1.set_xticklabels([str(i) for i in np.arange(0,2000,500)])
+        #ax1.set_xticklabels([str(i) for i in np.arange(0,2000,500)])
+        ax1.xaxis.set_ticks(np.arange(0,2000,500))
 
     # setup labelling here
     ax1.set_xlabel('MAP (mm)')
     ax2.set_xlabel('MAT ($\degree$C)')
     ax3.set_xlabel('Latitude')
-    plt.show()
+    plt.savefig("../figs/parameters.pdf")
 
     return None
 

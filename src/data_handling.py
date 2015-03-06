@@ -50,8 +50,12 @@ class data_handling(object):
         y_approx = y_raw - min(y_raw)
         # normalise the NDVI grass estimate to bring into line with Jolly
         y_norm = (y_approx - min(y_approx))/(max(y_approx) - min(y_approx))
+        # normalise the SWC to account for differences in soil chars across sites
+        x_norm = (x_raw - min(x_raw))/(max(x_raw) - min(x_raw))
+
         # assign new values as extra columns to the dataframe
         dataset['SWC_smooth'] = x_approx
+        dataset['RWC'] = x_norm
         dataset['NDVI_grass'] = y_approx
         dataset['NDVI_norm'] = y_norm
         # return to user
