@@ -26,12 +26,12 @@ def main():
     # map data transformations to each dataset imported
     cor_data = [ dh.grass_correct_data(rd) for rd in raw_data ]
 
-    p0 = [20, 0.5, 1, 1.5]
+    p0 = [30, 5, 1, 1.5]
     bounds = [(0,1000),(0,1),(0,5),(0,5)]
 
     par_table = mo.optimize_all_sampling( mo.minimize_func, \
                     spring_motion, cor_data, p0, bounds, \
-                    ylabel="NDVI_norm", xlabel="RWC" )
+                    ylabel="NDVI_norm", xlabel="SWC10" )
 
 
     par_table.to_csv(out_path+"spring_parameters.csv", index_label="k",
@@ -39,7 +39,7 @@ def main():
 
     par_casted = mo.recast_par_table(par_table)
 
-    mp.plot_allSite_pendulum( cor_data, par_casted, mo.sig_mod1, xlabel="RWC" )
+    mp.plot_allSite_pendulum( cor_data, par_casted, mo.sig_mod1, xlabel="SWC10" )
 
 
 def spring_motion(par, data):

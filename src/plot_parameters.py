@@ -35,22 +35,32 @@ def main():
             ax2.tick_params( axis='x', which='both', labelbottom='off')
             ax3.tick_params( axis='x', which='both', labelbottom='off')
 
-        ax1.scatter(sub_tab["MAP"], sub_tab["Value"], s=50, c=r_colors, alpha=0.5)
+        ax1.scatter(sub_tab["MAP"], sub_tab["Value"], s=50, c=r_colors, zorder=100 )
         # add points individually for legend
         for i,j,k in zip(sub_tab.index, r_colors, m_labels):
-            out = ax2.scatter(sub_tab["MAT"].loc[i], sub_tab["Value"].loc[i], s=50, c=j, alpha=0.5, label=k)
+            out = ax2.scatter(sub_tab["MAT"].loc[i], sub_tab["Value"].loc[i], s=50, c=j, label=k, zorder=100)
             if b<1:
                 ax2.legend( handles=out, labels=m_labels, loc='center', fontsize=8, scatterpoints=1, \
-                        ncol=len(m_labels), bbox_to_anchor=(0.5, 1.1))
-        ax3.scatter(sub_tab["Latitude"], sub_tab["Value"], marker='D', s=50, c=r_colors, alpha=0.5)
+                        ncol=len(m_labels), bbox_to_anchor=(0.5, 1.15))
+        ax3.scatter(sub_tab["Latitude"], sub_tab["Value"], marker='D', s=50, c=r_colors, zorder=100)
         ax1.set_ylabel('k$_{'+plab[a]+'}$', fontsize=16)
-        #ax1.set_xticklabels([str(i) for i in np.arange(0,2000,500)])
-        ax1.xaxis.set_ticks(np.arange(0,2000,500))
+        ax1.xaxis.set_ticks(np.arange(0,2500,500))
+        ax2.xaxis.set_ticks(np.arange(20,30,2))
+        ax3.xaxis.set_ticks(np.arange(-24,-9,3))
+        # add error bars
+        ax1.errorbar(sub_tab["MAP"], sub_tab["Value"], xerr=sub_tab["sig_MAP"], yerr=sub_tab["Error"], \
+                     fmt='None', marker=None, ecolor='black', alpha=0.5, zorder=0)
+        ax2.errorbar(sub_tab["MAT"], sub_tab["Value"], xerr=sub_tab["sig_MAT"], yerr=sub_tab["Error"], \
+                     fmt='None', ecolor='black', alpha=0.5, zorder=0)
+        ax3.errorbar(sub_tab["Latitude"], sub_tab["Value"], yerr=sub_tab["Error"], \
+                     fmt='None', ecolor='black', alpha=0.5, zorder=0)
+
 
     # setup labelling here
     ax1.set_xlabel('MAP (mm)')
     ax2.set_xlabel('MAT ($\degree$C)')
     ax3.set_xlabel('Latitude')
+    #fig.tight_layout(w_pad=0.8, h_pad=0.1)
     plt.savefig("../figs/parameters.pdf")
 
     return None

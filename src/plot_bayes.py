@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 
+import pandas as pd
 import datetime, time
 import pickle
 import numpy as np
@@ -19,11 +20,12 @@ __version__ = '1.0'
 __status__ = 'prototype'
 
 def main():
+
     springObj = import_pickle(mcfile)
     _plotPosteriors(springObj)
     _plotForce(springObj)
     _plotSpring(springObj)
-    _plotCorrelations(springObj)
+    #_plotCorrelations(springObj)
 
 def import_pickle(fpath):
     fileObject = open(fpath, 'rb')
@@ -102,6 +104,7 @@ def _plotForce(pymc_obj):
     k_means = [ np.mean(k) for k in k_samples ]
 
     xs = np.arange(0., 0.3, 0.001)
+    #xs = np.arange(0., 1, 0.001)
     eforce = mo.sig_mod1( k_means[0:2], xs )
 
     plt.plot( xs, eforce, lw=3 )
@@ -113,29 +116,31 @@ def _plotSpring(pymc_obj):
     k_quantU = [ np.percentile(k, 97.5) for k in k_samples ]
     k_quantL = [ np.percentile(k, 2.5) for k in k_samples ]
 
-
-    # import data as a list of Pandas dataframes
-    dat_path = "../data/"
-    raw_data = dh.import_data(dat_path)
-    # map data transformations to each dataset imported
-    cor_data = [ dh.grass_correct_data(rd) for rd in raw_data ]
-
-    prediction = _sd.spring(k_means, cor_data[5]["SWC10"], eforce) \
+    prediction = _sd.spring(k_means, cor_data[xlabel], eforce) \
                     .calc_dynamics()['x']
-    pred_ci_U = _sd.spring( k_quantU, cor_data[5]["SWC10"], eforce) \
+    pred_ci_U = _sd.spring( k_quantU, cor_data[xlabel], eforce) \
                     .calc_dynamics()['x']
-    pred_ci_L = _sd.spring( k_quantL, cor_data[5]["SWC10"], eforce) \
+    pred_ci_L = _sd.spring( k_quantL, cor_data[xlabel], eforce) \
                     .calc_dynamics()['x']
 
     plt.fill_between( range(len(prediction)), pred_ci_U,  pred_ci_L, color='red', alpha=0.2)
-    plt.plot( cor_data[5]["NDVI_norm"], '.', lw=2, color="black")
+    plt.plot( cor_data["NDVI_norm"], '.', lw=2, color="black")
     plt.plot( prediction, lw=2, color="#DC143C")
     plt.show()
 
 if __name__=="__main__":
-    mcfile = "../outputs/spring_trace_SturtPlains"
     mo = _mo.model_optim_extras()
     dh = _dh.data_handling()
     eforce = mo.sig_mod1
+
+    xlabel = "SWC10"
+    site_name = "SturtPlains"
+    dat_path = "../data/filtered_"+site_name+"_v12.csv"
+
+    mcfile = "../outputs/spring_trace_exp_"+site_name
+
+    raw_data = pd.read_csv(dat_path)
+    cor_data = dh.grass_correct_data(raw_data)
+
     main()
 

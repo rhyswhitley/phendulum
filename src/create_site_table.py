@@ -17,7 +17,7 @@ def main(fpath, site):
     _map = ec_data.groupby(ec_data.index.year)["Precip_Con"].sum()
     _mat = ec_data.groupby(ec_data.index.year)["Ta_Con"].mean()
 
-    return (site, _map.mean(), _mat.mean(), _map.std()/_map.mean(), _mat.std()/_mat.mean())
+    return (site, _map.mean(), _mat.mean(), _map.std(), _mat.std())
 
 
 def get_all_site_names(ec_files):
