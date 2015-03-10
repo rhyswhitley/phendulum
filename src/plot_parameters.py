@@ -35,24 +35,26 @@ def main():
             ax2.tick_params( axis='x', which='both', labelbottom='off')
             ax3.tick_params( axis='x', which='both', labelbottom='off')
 
-        ax1.scatter(sub_tab["MAP"], sub_tab["Value"], s=50, c=r_colors, zorder=100 )
+        ax1.scatter(sub_tab["MAP"], sub_tab[value_lab], s=50, c=r_colors, zorder=100 )
         # add points individually for legend
         for i,j,k in zip(sub_tab.index, r_colors, m_labels):
-            out = ax2.scatter(sub_tab["MAT"].loc[i], sub_tab["Value"].loc[i], s=50, c=j, label=k, zorder=100)
+            out = ax2.scatter(sub_tab["MAT"].loc[i], sub_tab[value_lab].loc[i], s=50, c=j, label=k, zorder=100)
             if b<1:
                 ax2.legend( handles=out, labels=m_labels, loc='center', fontsize=8, scatterpoints=1, \
                         ncol=len(m_labels), bbox_to_anchor=(0.5, 1.15))
-        ax3.scatter(sub_tab["Latitude"], sub_tab["Value"], marker='D', s=50, c=r_colors, zorder=100)
+        ax3.scatter(sub_tab["Latitude"], sub_tab[value_lab], marker='D', s=50, c=r_colors, zorder=100)
         ax1.set_ylabel('k$_{'+plab[a]+'}$', fontsize=16)
-        ax1.xaxis.set_ticks(np.arange(0,2500,500))
-        ax2.xaxis.set_ticks(np.arange(20,30,2))
+        ax1.xaxis.set_ticks(np.arange(0,2500,250))
+        ax1.xaxis.set_ticklabels(np.arange(0,2500,500), rotation=45, ha="right")
+        ax2.xaxis.set_ticks(np.arange(20,30,1))
+        ax2.xaxis.set_ticklabels(np.arange(20,30,1), rotation=45, ha="right")
         ax3.xaxis.set_ticks(np.arange(-24,-9,3))
         # add error bars
-        ax1.errorbar(sub_tab["MAP"], sub_tab["Value"], xerr=sub_tab["sig_MAP"], yerr=sub_tab["Error"], \
+        ax1.errorbar(sub_tab["MAP"], sub_tab[value_lab], xerr=sub_tab["sig_MAP"], yerr=sub_tab[sd_lab], \
                      fmt='None', marker=None, ecolor='black', alpha=0.5, zorder=0)
-        ax2.errorbar(sub_tab["MAT"], sub_tab["Value"], xerr=sub_tab["sig_MAT"], yerr=sub_tab["Error"], \
+        ax2.errorbar(sub_tab["MAT"], sub_tab[value_lab], xerr=sub_tab["sig_MAT"], yerr=sub_tab[sd_lab], \
                      fmt='None', ecolor='black', alpha=0.5, zorder=0)
-        ax3.errorbar(sub_tab["Latitude"], sub_tab["Value"], yerr=sub_tab["Error"], \
+        ax3.errorbar(sub_tab["Latitude"], sub_tab[value_lab], yerr=sub_tab[sd_lab], \
                      fmt='None', ecolor='black', alpha=0.5, zorder=0)
 
 
@@ -67,7 +69,10 @@ def main():
 
 
 if __name__=="__main__":
-    pars_path = "../outputs/spring_parameters.csv"
+    #pars_path = "../outputs/spring_parameters.csv"
+    pars_path = "../outputs/spring_posteriors.csv"
     site_path = "../data/site_char.csv"
+    value_lab = "Mean"
+    sd_lab = "SD"
 
     main()

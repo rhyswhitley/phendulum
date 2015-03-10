@@ -20,11 +20,11 @@ class spring(object):
     be water, temperature, etc. driving such phenology.
     """
 
-    def __init__(self, k_spring, Xt, XE_force, x_init=0, v_init=0, mass=1, dt=0.07):
+    def __init__(self, k_spring, Xt, XE_force, mass=1, dt=0.07):
         # time-varying inputs
         klen = len(k_spring)
-        self.kforce = k_spring[0:klen-2]
-        self.kspring = k_spring[klen-2:klen]
+        self.kforce = k_spring[0:klen-4]
+        self.kspring = k_spring[klen-4:klen-2]
         self.force_Xt = XE_force(self.kforce, Xt)
         self.time = len(Xt)
         # parameters that describe motion
@@ -32,8 +32,8 @@ class spring(object):
         self.k_drag = self.kspring
         self.mass = mass
         self.dt = dt
-        self.x_init = x_init
-        self.v_init = v_init
+        self.x_init, \
+        self.v_init = k_spring[klen-2:klen]
 
     def hookes_law(self, x):
         # Hooke's Law for a spring

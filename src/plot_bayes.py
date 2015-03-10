@@ -25,7 +25,7 @@ def main():
     _plotPosteriors(springObj)
     _plotForce(springObj)
     _plotSpring(springObj)
-    #_plotCorrelations(springObj)
+    _plotCorrelations(springObj)
 
 def import_pickle(fpath):
     fileObject = open(fpath, 'rb')
@@ -134,7 +134,7 @@ if __name__=="__main__":
     eforce = mo.sig_mod1
 
     xlabel = "SWC10"
-    site_name = "SturtPlains"
+    site_name = "AliceSprings"
     dat_path = "../data/filtered_"+site_name+"_v12.csv"
 
     mcfile = "../outputs/spring_trace_exp_"+site_name
