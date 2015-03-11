@@ -25,7 +25,7 @@ def main():
     _plotPosteriors(springObj)
     _plotForce(springObj)
     _plotSpring(springObj)
-    _plotCorrelations(springObj)
+    #_plotCorrelations(springObj)
 
 def import_pickle(fpath):
     fileObject = open(fpath, 'rb')
@@ -100,7 +100,7 @@ def _plotTrace(fObj, gObj, sample):
     pObj.plot(sample, color="#DC143C", linestyle='-', alpha=0.8)
 
 def _plotForce(pymc_obj):
-    k_samples = [ pymc_obj['k_{0}'.format(i)].values() for i in range(1,5)]
+    k_samples = [ pymc_obj['k_{0}'.format(i)].values() for i in range(1,7)]
     k_means = [ np.mean(k) for k in k_samples ]
 
     xs = np.arange(0., 0.3, 0.001)
@@ -111,10 +111,10 @@ def _plotForce(pymc_obj):
     plt.show()
 
 def _plotSpring(pymc_obj):
-    k_samples = [ pymc_obj['k_{0}'.format(i)].values() for i in range(1,5)]
-    k_means = [ np.mean(k) for k in k_samples ]
-    k_quantU = [ np.percentile(k, 97.5) for k in k_samples ]
-    k_quantL = [ np.percentile(k, 2.5) for k in k_samples ]
+    k_samples = [ pymc_obj['k_{0}'.format(i)].values() for i in range(1,7)]
+    k_means = [ np.mean(k[::10]) for k in k_samples ]
+    k_quantU = [ np.percentile(k[::10], 97.5) for k in k_samples ]
+    k_quantL = [ np.percentile(k[::10], 2.5) for k in k_samples ]
 
     prediction = _sd.spring(k_means, cor_data[xlabel], eforce) \
                     .calc_dynamics()['x']
@@ -126,6 +126,7 @@ def _plotSpring(pymc_obj):
     plt.fill_between( range(len(prediction)), pred_ci_U,  pred_ci_L, color='red', alpha=0.2)
     plt.plot( cor_data["NDVI_norm"], '.', lw=2, color="black")
     plt.plot( prediction, lw=2, color="#DC143C")
+    plt.axis([0,len(prediction),0,1])
     plt.show()
 
 if __name__=="__main__":
@@ -134,10 +135,10 @@ if __name__=="__main__":
     eforce = mo.sig_mod1
 
     xlabel = "SWC10"
-    site_name = "AliceSprings"
+    site_name = "AdelaideRiver"
     dat_path = "../data/filtered_"+site_name+"_v12.csv"
 
-    mcfile = "../outputs/spring_trace_exp_"+site_name
+    mcfile = "../outputs/spring_trace_uniInit_"+site_name
 
     raw_data = pd.read_csv(dat_path)
     cor_data = dh.grass_correct_data(raw_data)
