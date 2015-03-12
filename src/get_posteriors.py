@@ -11,7 +11,7 @@ import matplotlib.gridspec as gridspec
 import data_handling as _dh
 
 def main():
-    post_sols = load_data("../outputs/", "^spring_trace_exp_*")
+    post_sols = load_data("../outputs/mcmc/", search)
 
     site_names = dh.get_all_site_names(post_sols[0], regex='\w+$', pos=1)
 
@@ -23,7 +23,7 @@ def main():
     post_table = pd.DataFrame(np.vstack(k_means))
     post_table.columns = ['Site','k','Mean','SD','CI05','CI95']
     post_table["Sampling"] = "in"
-    post_table.to_csv("../outputs/spring_posteriors.csv", index=False, index_label=False)
+    post_table.to_csv("../outputs/pars/spring_posteriors.csv", index=False, index_label=False)
     plot_posteriors(k_traces, burn, lag)
     plot_traces(k_traces, lag)
 
@@ -85,4 +85,6 @@ if __name__=="__main__":
     dh = _dh.data_handling()
     lag = 5
     burn = 5000
+    #search = "^spring_trace_uniInit_*"
+    search = "^spring_trace_exp_*"
     main()

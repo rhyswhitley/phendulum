@@ -2,7 +2,7 @@
 
 import pandas as pd
 import datetime, time
-import pickle
+import pickle, re
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
@@ -22,10 +22,11 @@ __status__ = 'prototype'
 def main():
 
     springObj = import_pickle(mcfile)
-    _plotPosteriors(springObj)
-    _plotForce(springObj)
-    _plotSpring(springObj)
-    #_plotCorrelations(springObj)
+    klen = len([ key for key in springObj.keys() if re.match("^k.*",key) ])
+    _plotPosteriors(springObj, klen)
+    _plotForce(springObj, klen)
+    _plotSpring(springObj, klen)
+    #_plotCorrelations(springObj, klen)
 
 def import_pickle(fpath):
     fileObject = open(fpath, 'rb')
@@ -33,9 +34,9 @@ def import_pickle(fpath):
     fileObject.close()
     return data
 
-def _plotPosteriors(pymc_obj):
+def _plotPosteriors(pymc_obj, klen):
 
-    k_samples = [ pymc_obj['k_{0}'.format(i)].values() for i in range(1,5) ]
+    k_samples = [ pymc_obj['k_{0}'.format(i)].values() for i in range(1,klen+1) ]
     noSamples = len(k_samples)
 
     fig = plt.figure(figsize=(8,9))
@@ -45,8 +46,8 @@ def _plotPosteriors(pymc_obj):
         _plotHist(fig, gs[i+1], k_samples[j][::1])
     plt.show()
 
-def _plotCorrelations(pymc_obj):
-    k_samples = [ pymc_obj['k_{0}'.format(i)].values() for i in range(1,5)]
+def _plotCorrelations(pymc_obj, klen):
+    k_samples = [ pymc_obj['k_{0}'.format(i)].values() for i in range(1,klen+1)]
     noSamples = len(k_samples)
 
     fig = plt.figure(figsize=(11,8))
@@ -99,8 +100,8 @@ def _plotTrace(fObj, gObj, sample):
     pObj = fObj.add_subplot(gObj)
     pObj.plot(sample, color="#DC143C", linestyle='-', alpha=0.8)
 
-def _plotForce(pymc_obj):
-    k_samples = [ pymc_obj['k_{0}'.format(i)].values() for i in range(1,7)]
+def _plotForce(pymc_obj, klen):
+    k_samples = [ pymc_obj['k_{0}'.format(i)].values() for i in range(1,klen+1)]
     k_means = [ np.mean(k) for k in k_samples ]
 
     xs = np.arange(0., 0.3, 0.001)
@@ -110,35 +111,41 @@ def _plotForce(pymc_obj):
     plt.plot( xs, eforce, lw=3 )
     plt.show()
 
-def _plotSpring(pymc_obj):
-    k_samples = [ pymc_obj['k_{0}'.format(i)].values() for i in range(1,7)]
-    k_means = [ np.mean(k[::10]) for k in k_samples ]
-    k_quantU = [ np.percentile(k[::10], 97.5) for k in k_samples ]
-    k_quantL = [ np.percentile(k[::10], 2.5) for k in k_samples ]
+def _plotSpring(pymc_obj, klen):
+    k_samples = [ pymc_obj['k_{0}'.format(i)].values() for i in range(1,klen+1)]
+    k_mean = [ np.mean(k[::10]) for k in k_samples ]
+    k_ci05 = [ np.percentile(k[::10], 97.5) for k in k_samples ]
+    k_ci95 = [ np.percentile(k[::10], 2.5) for k in k_samples ]
 
-    prediction = _sd.spring(k_means, cor_data[xlabel], eforce) \
+    if klen<5:
+        x_init = cor_data.NDVI_norm[0]
+        v_init = cor_data.NDVI_norm[1] - cor_data.NDVI_norm[0]
+        k_mean = np.concatenate([k_mean,[x_init,v_init]], axis=0)
+        k_ci05 = np.concatenate([k_ci05,[x_init,v_init]], axis=0)
+        k_ci95 = np.concatenate([k_ci95,[x_init,v_init]], axis=0)
+
+    prediction = _sd.spring(k_mean, cor_data[xlabel], eforce) \
                     .calc_dynamics()['x']
-    pred_ci_U = _sd.spring( k_quantU, cor_data[xlabel], eforce) \
+    pred_ci_U = _sd.spring( k_ci05, cor_data[xlabel], eforce) \
                     .calc_dynamics()['x']
-    pred_ci_L = _sd.spring( k_quantL, cor_data[xlabel], eforce) \
+    pred_ci_L = _sd.spring( k_ci95, cor_data[xlabel], eforce) \
                     .calc_dynamics()['x']
 
     plt.fill_between( range(len(prediction)), pred_ci_U,  pred_ci_L, color='red', alpha=0.2)
     plt.plot( cor_data["NDVI_norm"], '.', lw=2, color="black")
     plt.plot( prediction, lw=2, color="#DC143C")
-    plt.axis([0,len(prediction),0,1])
     plt.show()
 
 if __name__=="__main__":
-    mo = _mo.model_optim_extras()
     dh = _dh.data_handling()
+    mo = _mo.model_optim_extras()
     eforce = mo.sig_mod1
 
     xlabel = "SWC10"
     site_name = "AdelaideRiver"
     dat_path = "../data/filtered_"+site_name+"_v12.csv"
 
-    mcfile = "../outputs/spring_trace_uniInit_"+site_name
+    mcfile = "../outputs/mcmc/spring_trace_exp_"+site_name
 
     raw_data = pd.read_csv(dat_path)
     cor_data = dh.grass_correct_data(raw_data)

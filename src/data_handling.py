@@ -26,7 +26,7 @@ class data_handling(object):
         file_names = [ f for f in listdir(dat_path) if re.match(includes,f) ]
         assert file_names!=[], "There are no filtered datasets in the "+dat_path+" location: run the filter script first"
         # read files in
-        datasets = [ pd.read_csv(dat_path+x) for x in file_names ]
+        datasets = [ pd.read_csv(dat_path+x, parse_dates=True, index_col=['DT']) for x in file_names ]
         # find site names
         site_names = self.get_all_site_names( file_names )
         # attach site names relating to each imported dataset
