@@ -22,7 +22,7 @@ def main(fpath):
     # Let just grab what we need -- SWC and NDVI
     ec_phen = ec_data.loc[:,("Sws_Con","250m_16_days_NDVI_new_smooth","VPD_Con")]
     ec_temp = ec_data.loc[:,("Ta_Con")]
-    ec_rain = ec_data.loc[:,"Precip_Con"]
+    ec_watr = ec_data.loc[:,("Precip_Con","Fn_Con","Fe_Con")]
 
     # Resample the hourly data to daily (although we could just do 16-day)
     phen_sampled = ec_phen.resample('D', how='mean',)
@@ -34,9 +34,11 @@ def main(fpath):
     temp_sampled.columns = ["Tmean","Tmin","Tmax"]
     temp_filt = temp_sampled[ndvi_pred]
 
-    rain_sampled = ec_rain.resample('D', how='sum',)
-    rain_sampled.columns = ["Rainfall"]
+    rain_sampled = ec_watr.resample('D', how='sum',)
+    rain_sampled.columns = ["Rain","Rnet","AET"]
     rain_filt = rain_sampled[ndvi_pred]
+
+    rain_filt.Rnet[rain_filt.Rnet<0] = 1
 
     # put it all together here
     all_filt = pd.concat([phen_filt, temp_filt, rain_filt], axis=1)
@@ -45,8 +47,20 @@ def main(fpath):
         lambda x: photoperiod(site_coord.Latitude,x), \
         phen_filt.index.dayofyear )
 
+    all_filt["EET"] = [ slope(t)*A/(psycho(t)+slope(t))
+        for t,A in zip(all_filt.Tmean,all_filt.Rnet)]
+
+    all_filt["Alpha"] = [ aet/eet for aet,eet in zip(all_filt.AET,all_filt.EET)]
+
+    all_filt.Alpha[all_filt.Alpha>1.26] = 1.26
+
+    plt.plot( all_filt.Alpha )
+    plt.show()
+
+    print all_filt.head()
+    return None
     # Write to CSV into the Data folder
-    all_filt.to_csv(opath, sep=",")
+    #all_filt.to_csv(opath, sep=",")
 
     # Add date/time index
     all_filt.reset_index(level=0, inplace=True)
@@ -129,6 +143,20 @@ def photoperiod(lat, doy):
     photohr = 24. - (24./math.pi)*math.acos(numerator/denominator)
     return photohr
 
+"""
+s=6.1078*17.269*237.3*exp(17.269*tt/(237.3+tt))	! slope of saturation vapour pressure curve (t-dependent)
+slope=0.1*(s/(237.3+tt)**2)
+psych=0.1*(0.646*exp(0.00097*tt))		! psych is temp-dependent
+"""
+
+def slope(tair):
+    """Slope of the relationships between vapour pressure and air temperature"""
+    s = 6.1078*17.269*237.3*np.exp(17.269*tair/(237.3+tair))
+    return 0.1*(s/(237.3+tair)**2)
+
+def psycho(tair):
+    """Psychometric constant"""
+    return 0.1*(0.646*np.exp(9.7E-4*tair))
 
 if __name__ == '__main__':
 
@@ -143,8 +171,9 @@ if __name__ == '__main__':
     version = "_v12"
 
     # collect all files for processed eddy covariance datasets in the data folder
-    natt_names = ["AdelaideRiver","AliceSprings","DalyUncleared","DryRiver", \
-                  "HowardSprings","SturtPlains"]
+#    natt_names = ["AdelaideRiver","AliceSprings","DalyUncleared","DryRiver", \
+#                  "HowardSprings","SturtPlains"]
+    natt_names = ["SturtPlains"]
 
     get_files = [ f for f in listdir(search_path) if f.endswith('.csv') ]
 
