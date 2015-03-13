@@ -38,87 +38,33 @@ def main(fpath):
     rain_sampled.columns = ["Rain","Rnet","AET"]
     rain_filt = rain_sampled[ndvi_pred]
 
+    # net radiation cannot be less than 0
     rain_filt.Rnet[rain_filt.Rnet<0] = 1
 
-    # put it all together here
+    # put all preliminary information together here
     all_filt = pd.concat([phen_filt, temp_filt, rain_filt], axis=1)
 
     all_filt["Photoperiod"] = map( \
         lambda x: photoperiod(site_coord.Latitude,x), \
         phen_filt.index.dayofyear )
 
-    all_filt["EET"] = [ slope(t)*A/(psycho(t)+slope(t))
-        for t,A in zip(all_filt.Tmean,all_filt.Rnet)]
+    all_filt["EET"] = [ equal_evap(T,A) for T,A in zip(all_filt.Tmean,all_filt.Rnet)]
 
     all_filt["Alpha"] = [ aet/eet for aet,eet in zip(all_filt.AET,all_filt.EET)]
-
+    # correct for exceedingly high values
     all_filt.Alpha[all_filt.Alpha>1.26] = 1.26
 
-    plt.plot( all_filt.Alpha )
+    moo = np.array(all_filt["NDVI250X"])
+    moo2 = f_frac(moo)
+
+    plt.plot(all_filt["NDVI250X"], color='black', lw=2)
+    plt.plot(moo2, color='red', lw=2)
     plt.show()
 
-    print all_filt.head()
+    #print all_filt.head()
     return None
     # Write to CSV into the Data folder
     #all_filt.to_csv(opath, sep=",")
-
-    # Add date/time index
-    all_filt.reset_index(level=0, inplace=True)
-
-    # Plots environmental data
-    if draw_plot==True:
-
-        fig, (ax1,ax2) = plt.subplots(2, 1, sharex=True, figsize=(9,6))
-        fig.subplots_adjust(hspace=0.1)
-        fig.subplots_adjust(wspace=0.1)
-        plt.rcParams['text.usetex'] = False
-        plt.rcParams['font.family'] = "sans-serif"
-        plt.rcParams['font.sans-serif'] = "Helvetica"
-        plt.rcParams['axes.labelsize'] = 12
-        plt.rcParams['font.size'] = 12
-        plt.rcParams['legend.fontsize'] = 9
-        plt.rcParams['xtick.labelsize'] = 12
-        plt.rcParams['ytick.labelsize'] = 12
-
-        almost_black = '#262626'
-        # change the tick colors also to the almost black
-        plt.rcParams['ytick.color'] = almost_black
-        plt.rcParams['xtick.color'] = almost_black
-
-        # change the text colors also to the almost black
-        plt.rcParams['text.color'] = almost_black
-
-        # Change the default axis colors from black to a slightly lighter black,
-        # and a little thinner (0.5 instead of 1)
-        plt.rcParams['axes.edgecolor'] = almost_black
-        plt.rcParams['axes.labelcolor'] = almost_black
-
-        ax1.plot(all_filt['DT'], all_filt["NDVI250X"], linestyle='-', color='red')
-        ax2.plot(all_filt['DT'], all_filt["SWC10"], linestyle='-', color='blue')
-        ax1.set_ylabel(r"NDVI (-)")
-        ax2.set_ylabel(r"$\theta_{10cm}$")
-        ax2.set_xlabel(r"Years")
-
-        # force zero start in range
-        ax1.set_ylim(ymin=0)
-        ax2.set_ylim(ymin=0)
-
-        ax1.yaxis.major.locator.set_params(nbins=5)
-        ax2.yaxis.major.locator.set_params(nbins=5)
-
-        simpleaxis(ax1)
-        simpleaxis(ax2)
-
-        #fig.autofmt_xdate()
-        fig.savefig("{0}{1}_filt.pdf".format(fig_path,site),
-                    bbox_inches='tight', pad_inches=0.1)
-
-def simpleaxis(ax):
-    """ Remove the top line and right line on the plot face """
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.get_xaxis().tick_bottom()
-    ax.get_yaxis().tick_left()
 
 def get_all_site_names(ec_files):
     # list comprehensive way of getting all names in bulk
@@ -143,18 +89,54 @@ def photoperiod(lat, doy):
     photohr = 24. - (24./math.pi)*math.acos(numerator/denominator)
     return photohr
 
-"""
-s=6.1078*17.269*237.3*exp(17.269*tt/(237.3+tt))	! slope of saturation vapour pressure curve (t-dependent)
-slope=0.1*(s/(237.3+tt)**2)
-psych=0.1*(0.646*exp(0.00097*tt))		! psych is temp-dependent
-"""
+def f_frac(ndvi):
+    """
+    4 stage process based on Donohue et al. (2009) to separate out tree and grass cover,
+    using moving averages
+    """
+    # first calculate the 7-month moving minimum window across the time-series
+    f1 = moving_something(min, ndvi)
 
-def slope(tair):
+    return f1
+
+def moving_something(_fun, tseries, period=7, is_days=True):
+    """
+    Applies a function to a moving window of the time-series:
+    ft_ = function([ f(t-N), f(t). f(t+N)])
+    """
+    # if the time-series is at a day-time step, update the window to a step-size of 16 days
+    if is_days:
+        p0 = period*16
+    else:
+        p0 = period
+
+    # find upper and lower bounds of the moving window
+    half = p0//2
+    tlen = len(tseries)
+    twin = [0]*tlen
+
+    for t in tseries:
+        # find the something for the window that satisfy the edge conditions
+        if t < half:
+            twin.append( _fun(tseries[t:t+half]) )
+        elif t > tlen-half:
+            twin.append( _fun(tseries[t-half:t]) )
+        else:
+            twin.append( _fun(tseries[t-half:t+half]) )
+
+    return twin
+
+def equal_evap(tair, Srad):
+    s = sat_vap_slope(tair)
+    g = psychometric(tair)
+    return (s*Srad)/(s+g)
+
+def sat_vap_slope(tair):
     """Slope of the relationships between vapour pressure and air temperature"""
     s = 6.1078*17.269*237.3*np.exp(17.269*tair/(237.3+tair))
     return 0.1*(s/(237.3+tair)**2)
 
-def psycho(tair):
+def psychometric(tair):
     """Psychometric constant"""
     return 0.1*(0.646*np.exp(9.7E-4*tair))
 

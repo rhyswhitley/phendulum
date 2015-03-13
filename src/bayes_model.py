@@ -37,30 +37,33 @@ def mcmc_wrap(data, site):
 
 def mcmc_optim(ys, xs, site):
 
-#    k_1 = pymc.Uniform('k_1', 1, 1e3, value=100)
-#    k_2 = pymc.Uniform('k_2', 0, 1e2, value=10)
-#    k_3 = pymc.Uniform('k_3', 0, 1e2, value=0.001)
-#    k_4 = pymc.Uniform('k_4', 0, 1e2, value=5)
-    b_1 = pymc.Uniform('b_1', -1e3, 1e3, value=1)
-    b_2 = pymc.Uniform('b_2', -1e3, 1e3, value=1)
-    b_3 = pymc.Uniform('b_3', -1e3, 1e3, value=1)
-    b_4 = pymc.Uniform('b_4', -1e3, 1e3, value=1)
-    k_1 = pymc.Exponential('k_1', b_1, value=10)
-    k_2 = pymc.Exponential('k_2', b_2, value=0.1)
-    k_3 = pymc.Exponential('k_3', b_3, value=1)
-    k_4 = pymc.Exponential('k_4', b_4, value=2)
+    k_1 = pymc.Uniform('k_1', 1, 1e3, value=30)
+    k_2 = pymc.Uniform('k_2', 0, 1e2, value=4)
+    k_3 = pymc.Uniform('k_3', 0, 1e2, value=1)
+    k_4 = pymc.Uniform('k_4', 0, 1e2, value=2)
+#    b_1 = pymc.Uniform('b_1', -1e3, 1e3, value=1)
+#    b_2 = pymc.Uniform('b_2', -1e3, 1e3, value=1)
+#    b_3 = pymc.Uniform('b_3', -1e3, 1e3, value=1)
+#    b_4 = pymc.Uniform('b_4', -1e3, 1e3, value=1)
+#    k_1 = pymc.Exponential('k_1', b_1, value=10)
+#    k_2 = pymc.Exponential('k_2', b_2, value=0.1)
+#    k_3 = pymc.Exponential('k_3', b_3, value=1)
+#    k_4 = pymc.Exponential('k_4', b_4, value=2)
+    k_5 = pymc.Uniform('k_5', -1, 1, value=0)
+    k_6 = pymc.Uniform('k_6', -1, 1, value=0)
 
     @pymc.deterministic
-    def springModel(ks_1=k_1, ks_2=k_2, ks_3=k_3, ks_4=k_4, xs=xs):
-        ks = [ks_1, ks_2, ks_3, ks_4]
-        mySpring = _sd.spring(ks, xs, mo.sig_mod1, x_init=0.14, v_init=0.01)
+    def springModel(ks_1=k_1, ks_2=k_2, ks_3=k_3, ks_4=k_4, ks_5=k_5, ks_6=k_6, xs=xs):
+        ks = [ks_1, ks_2, ks_3, ks_4, ks_5, ks_6]
+        mySpring = _sd.spring(ks, xs, mo.sig_mod1)
         return mySpring.calc_dynamics()['x']
 
     likelihood = pymc.Normal('likelihood', mu=springModel, tau=1, value=ys, observed=True)
 
-    bayesModel = pymc.Model([likelihood, k_1, k_2, k_3, k_4, b_1, b_2, b_3, b_4])
-    springPost = pymc.MCMC(bayesModel, db='pickle', dbname='../outputs/spring_trace_exp_'+site)
-    springPost.sample(5e4, 2e4, 1)
+    #bayesModel = pymc.Model([likelihood, k_1, k_2, k_3, k_4, k_5, k_6, b_1, b_2, b_3, b_4])
+    bayesModel = pymc.Model([likelihood, k_1, k_2, k_3, k_4, k_5, k_6])
+    springPost = pymc.MCMC(bayesModel, db='pickle', dbname='../outputs/spring_trace_uniInit_'+site)
+    springPost.sample(6e4, 3e4, 1)
 
     pymc.Matplot.plot(springPost)
 
