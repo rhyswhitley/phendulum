@@ -58,7 +58,8 @@ def main(fpath):
     moo2 = f_frac(moo)
 
     plt.plot(all_filt["NDVI250X"], color='black', lw=2)
-    plt.plot(moo2, color='red', lw=2)
+    plt.plot(moo2['tree'], color='red', lw=2)
+    plt.plot(moo2['grass'], color='green', lw=2)
     plt.show()
 
     #print all_filt.head()
@@ -91,38 +92,43 @@ def photoperiod(lat, doy):
 
 def f_frac(ndvi):
     """
-    4 stage process based on Donohue et al. (2009) to separate out tree and grass cover,
-    using moving averages
+    Process based on Donohue et al. (2009) to separate out tree and grass cover,
+    using moving windows (adapted here for daily time-step)
     """
     # first calculate the 7-month moving minimum window across the time-series
-    f1 = moving_something(min, ndvi)
+    fp1 = moving_something(np.min, ndvi, period=7)
+    fp2 = moving_something(lambda x: sum(x)/(9*16), fp1, period=9)
+    fr1 = ndvi - fp2
 
-    return f1
+    ftree = [ p2-np.abs(r1) if r1<0 else p2 for p2,r1 in zip(fp2,fr1) ]
+    fgrass = ndvi - ftree
 
-def moving_something(_fun, tseries, period=7, is_days=True):
+    return ({'tree':ftree, 'grass':fgrass})
+
+def moving_something(_fun, tseries, period, day_rs=16, is_days=True):
     """
     Applies a function to a moving window of the time-series:
     ft_ = function([ f(t-N), f(t). f(t+N)])
     """
     # if the time-series is at a day-time step, update the window to a step-size of 16 days
     if is_days:
-        p0 = period*16
+        p0 = period*day_rs
     else:
         p0 = period
 
     # find upper and lower bounds of the moving window
     half = p0//2
     tlen = len(tseries)
-    twin = [0]*tlen
 
-    for t in tseries:
+    twin = [0]*tlen
+    for i in range(tlen):
         # find the something for the window that satisfy the edge conditions
-        if t < half:
-            twin.append( _fun(tseries[t:t+half]) )
-        elif t > tlen-half:
-            twin.append( _fun(tseries[t-half:t]) )
+        if i < half:
+            twin[i] = _fun(tseries[0:i+half])
+        elif i > tlen-half:
+            twin[i] = _fun(tseries[i-half:tlen])
         else:
-            twin.append( _fun(tseries[t-half:t+half]) )
+            twin[i] = _fun(tseries[i-half:i+half])
 
     return twin
 
