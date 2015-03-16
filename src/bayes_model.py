@@ -26,14 +26,29 @@ def main():
             for rd in raw_data ]
 
     # test with Sturt Plains
-    mcmc_wrap(cor_data[1],cor_data[1].Site[1])
+    mcmc_wrap(cor_data[5],cor_data[5].Site[5])
     #[ mcmc_wrap(d,d["Site"][0]) for d in cor_data ]
 
 def mcmc_wrap(data, site):
-    print("MCMC Optim Model on ===> ", site)
+    print("MCMC Optim Model on ===> {0}".format(site))
     ys = data["NDVI_norm"]
     xs = data["SWC10"]
     mcmc_optim(ys, xs, site)
+
+def get_coefficients(map_):
+    coeff = [{str(variable): variable.value} for variable \
+            in map_.variables if str(variable).startswith('k')]
+    return sorted(coeff)
+
+# Standard error calculation
+def get_stderrors(self, par, hess, Nx):
+    hessian = np.linalg.inv(hess)
+    fmin0 = opt_res['fun']
+    par = opt_res['x']
+    Mp = len(par)
+    H_sol = np.diag(np.linalg.solve(hessian,np.eye(Mp)))
+    coeff = Mp*fmin0/(Nx-Mp)
+    return np.sqrt(coeff*H_sol)
 
 
 def mcmc_optim(ys, xs, site, use_MCMC=False):
@@ -42,6 +57,9 @@ def mcmc_optim(ys, xs, site, use_MCMC=False):
     k_2 = pymc.Uniform('k_2', 0, 1e2, value=4)
     k_3 = pymc.Uniform('k_3', 0, 1e2, value=1)
     k_4 = pymc.Uniform('k_4', 0, 1e2, value=2)
+    k_5 = pymc.Uniform('k_5', -1, 1, value=0)
+    k_6 = pymc.Uniform('k_6', -1, 1, value=0)
+
 #    b_1 = pymc.Uniform('b_1', -1e3, 1e3, value=1)
 #    b_2 = pymc.Uniform('b_2', -1e3, 1e3, value=1)
 #    b_3 = pymc.Uniform('b_3', -1e3, 1e3, value=1)
@@ -50,8 +68,6 @@ def mcmc_optim(ys, xs, site, use_MCMC=False):
 #    k_2 = pymc.Exponential('k_2', b_2, value=0.1)
 #    k_3 = pymc.Exponential('k_3', b_3, value=1)
 #    k_4 = pymc.Exponential('k_4', b_4, value=2)
-    k_5 = pymc.Uniform('k_5', -1, 1, value=0)
-    k_6 = pymc.Uniform('k_6', -1, 1, value=0)
 
     @pymc.deterministic
     def springModel(ks_1=k_1, ks_2=k_2, ks_3=k_3, ks_4=k_4, ks_5=k_5, ks_6=k_6, xs=xs):
@@ -70,10 +86,11 @@ def mcmc_optim(ys, xs, site, use_MCMC=False):
     else:
         res = pymc.MAP(bayesModel)
         res.fit(method="fmin_powell")
-        print(res._mu)
-        print(res.hess)
-        for attr, value in res.__dict__.iteritems():
-            print(attr)
+        #res.fit(method="fmin_ncg")
+        k_val = get_coefficients(res)
+        print(k_val)
+        print res.hess
+        print(res.fit.values)
 
 
     return None
