@@ -7,6 +7,8 @@ import pandas as pd
 from os import listdir
 import re
 
+pd.options.mode.chained_assignment = None
+
 def main(fpath):
 
     # Display column names and their index for reference
@@ -19,53 +21,59 @@ def main(fpath):
         for n,i in zip(ec_data.columns.values,range(ec_data.shape[1])):
             print( str(i) + " : " + n )
 
+    day_data = daily_agg(ec_data)
+    all_data = calc_extras(day_data, site_coord)
+
+    # Write to CSV into the Data folder
+    all_data.to_csv(opath, sep=",", float_format='%11.6f')
+
+def daily_agg(data):
     # Let just grab what we need -- SWC and NDVI
-    ec_phen = ec_data.loc[:,("Sws_Con","250m_16_days_NDVI_new_smooth","VPD_Con")]
-    ec_temp = ec_data.loc[:,("Ta_Con")]
-    ec_watr = ec_data.loc[:,("Precip_Con","Fn_Con","Fe_Con")]
+    ec_mean = data.loc[:,("Sws_Con","250m_16_days_NDVI_new_smooth","VPD_Con")]
+    ec_range = data.loc[:,("Ta_Con")]
+    ec_sums = data.loc[:,("Precip_Con","Fn_Con","Fe_Con")]
 
     # Resample the hourly data to daily (although we could just do 16-day)
-    phen_sampled = ec_phen.resample('D', how='mean',)
-    phen_sampled.columns = ["SWC10","NDVI250X","VPD"]
-    ndvi_pred = np.isfinite(phen_sampled['NDVI250X'])
-    phen_filt = phen_sampled[ndvi_pred]
+    day_mean0 = ec_mean.resample('D', how='mean',)
+    day_mean0.columns = ["SWC10","NDVI250X","VPD"]
+    ndvi_pred = np.isfinite(day_mean0['NDVI250X'])
+    day_mean1 = day_mean0[ndvi_pred]
 
-    temp_sampled = ec_temp.resample('D', how=('mean','min','max'),)
-    temp_sampled.columns = ["Tmean","Tmin","Tmax"]
-    temp_filt = temp_sampled[ndvi_pred]
+    day_range0 = ec_range.resample('D', how=('mean','min','max'),)
+    day_range0.columns = ["Tmean","Tmin","Tmax"]
+    day_range1 = day_range0[ndvi_pred]
 
-    rain_sampled = ec_watr.resample('D', how='sum',)
-    rain_sampled.columns = ["Rain","Rnet","AET"]
-    rain_filt = rain_sampled[ndvi_pred]
+    day_sum0 = ec_sums.resample('D', how='sum',)
+    day_sum0.columns = ["Rain","Rnet","AET"]
+    day_sum1 = day_sum0[ndvi_pred]
 
     # net radiation cannot be less than 0
-    rain_filt.Rnet[rain_filt.Rnet<0] = 1
+    day_sum1.loc[day_sum1['Rnet']<0, 'Rnet'] = 1
 
     # put all preliminary information together here
-    all_filt = pd.concat([phen_filt, temp_filt, rain_filt], axis=1)
+    all_filt = pd.concat([day_mean1, day_range1, day_sum1], axis=1)
+    return all_filt
 
-    all_filt["Photoperiod"] = map( \
-        lambda x: photoperiod(site_coord.Latitude,x), \
-        phen_filt.index.dayofyear )
+def calc_extras(data, geo):
 
-    all_filt["EET"] = [ equal_evap(T,A) for T,A in zip(all_filt.Tmean,all_filt.Rnet)]
+    # determine the daily photoperiod
+    data["Photoperiod"] = [ photoperiod(geo.Latitude,x) \
+        for x in data.index.dayofyear ]
 
-    all_filt["Alpha"] = [ aet/eet for aet,eet in zip(all_filt.AET,all_filt.EET)]
+    # determine equilibrium evaporation
+    data["EET"] = [ equal_evap(T,A) for T,A in zip(data.Tmean,data.Rnet)]
+
+    # determine the Cramer-Prentice parameter 'Alpha'
+    data["Alpha"] = [ aet/eet for aet,eet in zip(data.AET,data.EET)]
     # correct for exceedingly high values
-    all_filt.Alpha[all_filt.Alpha>1.26] = 1.26
+    data.loc[data['Alpha']>1.26, 'Alpha'] = 1.26
 
-    moo = np.array(all_filt["NDVI250X"])
-    moo2 = f_frac(moo)
+    # determine the partitioning of NDVI between tree and grass layers
+    tg_ratios = treegrass_frac(data["NDVI250X"], 30)
+    data["NDVI_tree"] = tg_ratios["tree"]
+    data["NDVI_grass"] = tg_ratios["grass"]
 
-    plt.plot(all_filt["NDVI250X"], color='black', lw=2)
-    plt.plot(moo2['tree'], color='red', lw=2)
-    plt.plot(moo2['grass'], color='green', lw=2)
-    plt.show()
-
-    #print all_filt.head()
-    return None
-    # Write to CSV into the Data folder
-    #all_filt.to_csv(opath, sep=",")
+    return data
 
 def get_all_site_names(ec_files):
     # list comprehensive way of getting all names in bulk
@@ -90,14 +98,14 @@ def photoperiod(lat, doy):
     photohr = 24. - (24./math.pi)*math.acos(numerator/denominator)
     return photohr
 
-def f_frac(ndvi):
+def treegrass_frac(ndvi, day_rs):
     """
     Process based on Donohue et al. (2009) to separate out tree and grass cover,
     using moving windows (adapted here for daily time-step)
     """
     # first calculate the 7-month moving minimum window across the time-series
-    fp1 = moving_something(np.min, ndvi, period=7)
-    fp2 = moving_something(lambda x: sum(x)/(9*16), fp1, period=9)
+    fp1 = moving_something(np.min, ndvi, period=7, day_rs=day_rs)
+    fp2 = moving_something(lambda x: sum(x)/(9*day_rs), fp1, period=9, day_rs=day_rs)
     fr1 = ndvi - fp2
 
     ftree = [ p2-np.abs(r1) if r1<0 else p2 for p2,r1 in zip(fp2,fr1) ]
@@ -124,9 +132,13 @@ def moving_something(_fun, tseries, period, day_rs=16, is_days=True):
     for i in range(tlen):
         # find the something for the window that satisfy the edge conditions
         if i < half:
-            twin[i] = _fun(tseries[0:i+half])
+            # fold back onto the end of the time-series
+            twin[i] = _fun( np.hstack([ tseries[tlen-(half-i):tlen],\
+                                        tseries[0:i+half]]) )
         elif i > tlen-half:
-            twin[i] = _fun(tseries[i-half:tlen])
+            # fold back into the beginning of the time-series
+            twin[i] = _fun( np.hstack([ tseries[i-half:tlen],\
+                                        tseries[0:half-(tlen-i)]]) )
         else:
             twin[i] = _fun(tseries[i-half:i+half])
 
@@ -159,9 +171,9 @@ if __name__ == '__main__':
     version = "_v12"
 
     # collect all files for processed eddy covariance datasets in the data folder
-#    natt_names = ["AdelaideRiver","AliceSprings","DalyUncleared","DryRiver", \
-#                  "HowardSprings","SturtPlains"]
-    natt_names = ["SturtPlains"]
+    natt_names = ["AdelaideRiver","AliceSprings","DalyUncleared","DryRiver", \
+                  "HowardSprings","SturtPlains"]
+#    natt_names = ["SturtPlains"]
 
     get_files = [ f for f in listdir(search_path) if f.endswith('.csv') ]
 
