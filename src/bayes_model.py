@@ -22,10 +22,11 @@ def main():
     raw_data = dh.import_data(dat_path)
 
     # map data transformations to each dataset imported
-    cor_data = [ dh.grass_correct_data(rd) for rd in raw_data ]
+    cor_data = [ dh.normalise_xydata(rd, yvar="NDVI_grass") \
+            for rd in raw_data ]
 
     # test with Sturt Plains
-    mcmc_wrap(cor_data[1],cor_data[1].Site[0])
+    mcmc_wrap(cor_data[1],cor_data[1].Site[1])
     #[ mcmc_wrap(d,d["Site"][0]) for d in cor_data ]
 
 def mcmc_wrap(data, site):
@@ -35,7 +36,7 @@ def mcmc_wrap(data, site):
     mcmc_optim(ys, xs, site)
 
 
-def mcmc_optim(ys, xs, site):
+def mcmc_optim(ys, xs, site, use_MCMC=False):
 
     k_1 = pymc.Uniform('k_1', 1, 1e3, value=30)
     k_2 = pymc.Uniform('k_2', 0, 1e2, value=4)
@@ -62,10 +63,18 @@ def mcmc_optim(ys, xs, site):
 
     #bayesModel = pymc.Model([likelihood, k_1, k_2, k_3, k_4, k_5, k_6, b_1, b_2, b_3, b_4])
     bayesModel = pymc.Model([likelihood, k_1, k_2, k_3, k_4, k_5, k_6])
-    springPost = pymc.MCMC(bayesModel, db='pickle', dbname='../outputs/spring_trace_uniInit_'+site)
-    springPost.sample(6e4, 3e4, 1)
+    if use_MCMC:
+        springPost = pymc.MCMC(bayesModel, db='pickle', dbname='../outputs/spring_trace_test'+site)
+        springPost.sample(5e4, 3e4, 1)
+        pymc.Matplot.plot(springPost)
+    else:
+        res = pymc.MAP(bayesModel)
+        res.fit(method="fmin_powell")
+        print(res._mu)
+        print(res.hess)
+        for attr, value in res.__dict__.iteritems():
+            print(attr)
 
-    pymc.Matplot.plot(springPost)
 
     return None
 

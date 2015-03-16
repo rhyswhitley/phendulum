@@ -35,7 +35,7 @@ class data_handling(object):
         # concatenate and return final dataframe
         return datasets
 
-    def grass_correct_data(self, dataset, xvar="SWC10", yvar="NDVI250X"):
+    def normalise_xydata(self, dataset, xvar="SWC10", yvar="NDVI250X"):
         """
         Function filters data to enable a better approximation of the
         environmental forcing that drives the momentum of the pendulum. In this
@@ -46,17 +46,14 @@ class data_handling(object):
         y_raw = dataset[yvar]
         # smooth SMC to obtain more identifiable extrema points (removes noise)
         x_approx = gaussian_filter(x_raw, 10)
-        # adjust NDVI by subtracting minimum time-series value to approximate grasses
-        y_approx = y_raw - min(y_raw)
         # normalise the NDVI grass estimate to bring into line with Jolly
-        y_norm = (y_approx - min(y_approx))/(max(y_approx) - min(y_approx))
+        y_norm = (y_raw - min(y_raw))/(max(y_raw) - min(y_raw))
         # normalise the SWC to account for differences in soil chars across sites
         x_norm = (x_raw - min(x_raw))/(max(x_raw) - min(x_raw))
 
         # assign new values as extra columns to the dataframe
         dataset['SWC_smooth'] = x_approx
         dataset['RWC'] = x_norm
-        dataset['NDVI_grass'] = y_approx
         dataset['NDVI_norm'] = y_norm
         # return to user
         return dataset
