@@ -26,7 +26,7 @@ def main():
             for rd in raw_data ]
 
     # test with Sturt Plains
-    mcmc_wrap(cor_data[5],cor_data[5].Site[5])
+    mcmc_wrap(cor_data[1],cor_data[1].Site[1])
     #[ mcmc_wrap(d,d["Site"][0]) for d in cor_data ]
 
 def mcmc_wrap(data, site):
@@ -57,7 +57,7 @@ def mcmc_optim(ys, xs, site, use_MCMC=False):
     k_2 = pymc.Uniform('k_2', 0, 1e2, value=4)
     k_3 = pymc.Uniform('k_3', 0, 1e2, value=1)
     k_4 = pymc.Uniform('k_4', 0, 1e2, value=2)
-    k_5 = pymc.Uniform('k_5', -1, 1, value=0)
+    k_5 = pymc.Uniform('k_5', 0, 1, value=0.5)
     k_6 = pymc.Uniform('k_6', -1, 1, value=0)
 
 #    b_1 = pymc.Uniform('b_1', -1e3, 1e3, value=1)
@@ -79,18 +79,10 @@ def mcmc_optim(ys, xs, site, use_MCMC=False):
 
     #bayesModel = pymc.Model([likelihood, k_1, k_2, k_3, k_4, k_5, k_6, b_1, b_2, b_3, b_4])
     bayesModel = pymc.Model([likelihood, k_1, k_2, k_3, k_4, k_5, k_6])
-    if use_MCMC:
-        springPost = pymc.MCMC(bayesModel, db='pickle', dbname='../outputs/spring_trace_test'+site)
-        springPost.sample(5e4, 3e4, 1)
-        pymc.Matplot.plot(springPost)
-    else:
-        res = pymc.MAP(bayesModel)
-        res.fit(method="fmin_powell")
-        #res.fit(method="fmin_ncg")
-        k_val = get_coefficients(res)
-        print(k_val)
-        print res.hess
-        print(res.fit.values)
+    _preopt = pymc.MAP(bayesModel).fit(method="fmin_powell")
+    springPost = pymc.MCMC(bayesModel, db='pickle', dbname='../outputs/spring_trace_test'+site)
+    springPost.sample(1e5)
+    pymc.Matplot.plot(springPost)
 
 
     return None
