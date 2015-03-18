@@ -27,7 +27,7 @@ def main():
     raw_data = dh.import_data(dat_path)
 
     # map data transformations to each dataset imported
-    cor_data = [ dh.grass_correct_data(rd) for rd in raw_data ]
+    cor_data = [ dh.normalise_xydata(rd) for rd in raw_data ]
 
     # import parameter posteriors
     post_table = pd.read_csv(out_path+ftable)

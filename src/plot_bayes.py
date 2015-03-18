@@ -148,7 +148,7 @@ if __name__=="__main__":
     mcfile = "../outputs/mcmc/spring_trace_exp_"+site_name
 
     raw_data = pd.read_csv(dat_path)
-    cor_data = dh.grass_correct_data(raw_data)
+    cor_data = dh.normalise_xydata(raw_data)
 
     main()
 
