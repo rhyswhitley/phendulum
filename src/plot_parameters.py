@@ -69,8 +69,8 @@ def main():
 
 
 if __name__=="__main__":
-    #pars_path = "../outputs/spring_parameters.csv"
-    pars_path = "../outputs/spring_posteriors.csv"
+    #pars_path = "../outputs/pars/spring_parameters.csv"
+    pars_path = "../outputs/pars/spring_posteriors.csv"
     site_path = "../data/site_char.csv"
     value_lab = "Mean"
     sd_lab = "SD"
